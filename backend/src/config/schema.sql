@@ -1,0 +1,149 @@
+-- SQL Schema for Assignment Deadline Dashboard
+
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  course TEXT NOT NULL,
+  semester TEXT NOT NULL,
+  division TEXT NOT NULL,
+  avatar_url TEXT,
+  points INTEGER DEFAULT 0,
+  streak INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS subjects (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  code TEXT,
+  color TEXT DEFAULT '#4F46E5',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS assignments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  subject_id INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  deadline DATETIME NOT NULL,
+  difficulty TEXT NOT NULL CHECK(difficulty IN ('EASY', 'MEDIUM', 'HARD', 'EXTREME')),
+  estimated_hours REAL NOT NULL DEFAULT 1.0,
+  progress INTEGER DEFAULT 0,
+  status TEXT DEFAULT 'PENDING' CHECK(status IN ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'OVERDUE')),
+  teacher TEXT,
+  submission_method TEXT,
+  notes TEXT,
+  priority_score REAL DEFAULT 0,
+  priority_level TEXT DEFAULT 'MEDIUM' CHECK(priority_level IN ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW')),
+  risk_level TEXT DEFAULT 'SAFE' CHECK(risk_level IN ('SAFE', 'APPROACHING', 'URGENT', 'OVERDUE')),
+  completed_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS subtasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  assignment_id INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  estimated_minutes INTEGER DEFAULT 30,
+  is_completed INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS resources (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  assignment_id INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  type TEXT NOT NULL CHECK(type IN ('URL', 'FILE', 'NOTE')),
+  url_or_path TEXT NOT NULL,
+  file_size INTEGER,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS groups (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  description TEXT,
+  creator_id INTEGER NOT NULL,
+  code TEXT UNIQUE NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS group_members (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  group_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  role TEXT DEFAULT 'MEMBER' CHECK(role IN ('LEADER', 'MEMBER')),
+  joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(group_id, user_id),
+  FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS group_tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  group_id INTEGER NOT NULL,
+  assigned_user_id INTEGER,
+  title TEXT NOT NULL,
+  deadline DATETIME,
+  status TEXT DEFAULT 'PENDING' CHECK(status IN ('PENDING', 'IN_PROGRESS', 'COMPLETED')),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
+  FOREIGN KEY (assigned_user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS achievements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  code TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  icon TEXT NOT NULL,
+  points_reward INTEGER DEFAULT 50
+);
+
+CREATE TABLE IF NOT EXISTS user_achievements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  achievement_id INTEGER NOT NULL,
+  earned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, achievement_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (achievement_id) REFERENCES achievements(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS user_points (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  points INTEGER NOT NULL,
+  reason TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  type TEXT DEFAULT 'INFO' CHECK(type IN ('INFO', 'WARNING', 'SUCCESS', 'URGENT')),
+  is_read INTEGER DEFAULT 0,
+  link TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_assignments_user ON assignments(user_id);
+CREATE INDEX IF NOT EXISTS idx_assignments_deadline ON assignments(deadline);
+CREATE INDEX IF NOT EXISTS idx_assignments_status ON assignments(status);
+CREATE INDEX IF NOT EXISTS idx_subtasks_assignment ON subtasks(assignment_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
