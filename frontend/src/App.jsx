@@ -37,6 +37,7 @@ const ProtectedRoute = ({ children }) => {
   return <Layout>{children}</Layout>;
 };
 
+
 export default function App() {
   return (
     <AuthProvider>
@@ -44,8 +45,8 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             {/* Public Routes */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/login/*" element={<Login />} />
+            <Route path="/register/*" element={<Register />} />
 
             {/* Protected Routes */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

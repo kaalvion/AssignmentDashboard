@@ -15,16 +15,13 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-// Response interceptor to handle 401 unauthorized
+// Response interceptor
 api.interceptors.response.use((response) => {
   return response.data;
 }, (error) => {
   if (error.response && error.response.status === 401) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-      window.location.href = '/login';
-    }
   }
   return Promise.reject(error.response ? error.response.data : { message: 'Network Error' });
 });

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { Bell, Search, LogOut, Sun, Moon } from 'lucide-react';
+import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/react';
 
 export default function Topbar() {
   const { user, logout } = useAuth();
@@ -191,26 +192,30 @@ export default function Topbar() {
           )}
         </div>
 
-        {/* User Badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, var(--primary), var(--accent-purple))',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontWeight: 700,
-            fontSize: '0.9rem'
-          }}>
-            {user?.name ? user.name.charAt(0).toUpperCase() : 'S'}
+        {/* Clerk Auth Controls */}
+        <Show when="signed-out">
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <SignInButton mode="modal">
+              <button className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>
+                Sign In
+              </button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <button className="btn btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>
+                Sign Up
+              </button>
+            </SignUpButton>
           </div>
-          <div style={{ display: 'none', mdDisplay: 'block' }}>
-            <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{user?.name || 'Student'}</div>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{user?.course} • Sem {user?.semester}</div>
+        </Show>
+
+        <Show when="signed-in">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <UserButton showName />
           </div>
+        </Show>
+
+        {/* Legacy Local User Logout fallback */}
+        {user && (
           <button
             onClick={logout}
             title="Logout"
@@ -218,8 +223,10 @@ export default function Topbar() {
           >
             <LogOut size={18} />
           </button>
-        </div>
+        )}
       </div>
     </header>
   );
 }
+
+

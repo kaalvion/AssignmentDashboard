@@ -1,68 +1,51 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useUser, useClerk } from '@clerk/react';
 import api from '../services/api';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const { user: clerkUser, isLoaded } = useUser();
+  const { signOut } = useClerk();
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const res = await api.get('/auth/me');
-          if (res.success) {
-            setUser(res.data);
-            localStorage.setItem('user', JSON.stringify(res.data));
-          }
-        } catch (err) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setUser(null);
-        }
+    if (isLoaded) {
+      if (clerkUser) {
+        setUser({
+          id: clerkUser.id,
+          name: clerkUser.fullName || clerkUser.firstName || clerkUser.primaryEmailAddress?.emailAddress?.split('@')[0] || 'Student',
+          email: clerkUser.primaryEmailAddress?.emailAddress || '',
+          avatar_url: clerkUser.imageUrl,
+          course: 'BCA',
+          semester: '4th',
+          division: 'A',
+          points: 120,
+          streak: 3
+        });
+      } else {
+        setUser(null);
       }
       setLoading(false);
-    };
-    checkAuth();
-  }, []);
+    }
+  }, [clerkUser, isLoaded]);
 
   const login = async (email, password) => {
-    const res = await api.post('/auth/login', { email, password });
-    if (res.success) {
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
-      setUser(res.data.user);
-    }
-    return res;
+    return { success: true };
   };
 
   const register = async (userData) => {
-    const res = await api.post('/auth/register', userData);
-    if (res.success) {
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
-      setUser(res.data.user);
-    }
-    return res;
+    return { success: true };
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const logout = async () => {
+    await signOut();
     setUser(null);
   };
 
   const updateUser = (updatedFields) => {
-    setUser(prev => {
-      const newUser = { ...prev, ...updatedFields };
-      localStorage.setItem('user', JSON.stringify(newUser));
-      return newUser;
-    });
+    setUser(prev => ({ ...prev, ...updatedFields }));
   };
 
   return (
@@ -73,3 +56,4 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
+
