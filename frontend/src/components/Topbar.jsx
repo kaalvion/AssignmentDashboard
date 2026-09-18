@@ -1,15 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
-import { Bell, Search, LogOut, Check, Sparkles } from 'lucide-react';
+import { Bell, Search, LogOut, Sun, Moon } from 'lucide-react';
 
 export default function Topbar() {
   const { user, logout } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'short',
@@ -57,6 +67,28 @@ export default function Topbar() {
           {currentDate}
         </div>
 
+        {/* Theme Switcher Toggle (Sahara Light / Obsidian Kinetic Dark) */}
+        <button
+          onClick={toggleTheme}
+          title={`Switch to ${theme === 'dark' ? 'Sahara Light' : 'Obsidian Kinetic Dark'} Theme`}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            padding: '0.4rem 0.75rem',
+            borderRadius: 'var(--radius-sm)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            color: 'var(--text-primary)',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            transition: 'all 0.2s ease'
+          }}
+        >
+          {theme === 'dark' ? <Sun size={16} style={{ color: '#F59E0B' }} /> : <Moon size={16} style={{ color: '#8B5CF6' }} />}
+          <span>{theme === 'dark' ? 'Sahara Light' : 'Obsidian Dark'}</span>
+        </button>
+
         {/* Notifications Dropdown */}
         <div style={{ position: 'relative' }}>
           <button
@@ -66,7 +98,7 @@ export default function Topbar() {
               width: '38px',
               height: '38px',
               borderRadius: '8px',
-              background: 'rgba(255,255,255,0.05)',
+              background: 'var(--bg-card)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -80,8 +112,9 @@ export default function Topbar() {
                 position: 'absolute',
                 top: '-4px',
                 right: '-4px',
-                background: 'var(--overdue)',
-                color: 'white',
+                background: 'var(--badge-critical-bg)',
+                color: 'var(--badge-critical-text)',
+                border: '1px solid var(--badge-critical-border)',
                 fontSize: '0.65rem',
                 fontWeight: 700,
                 width: '18px',
@@ -103,7 +136,7 @@ export default function Topbar() {
               top: '48px',
               width: '340px',
               maxHeight: '420px',
-              background: '#1E293B',
+              background: 'var(--bg-secondary)',
               border: '1px solid var(--border-color)',
               borderRadius: 'var(--radius-md)',
               boxShadow: 'var(--shadow-md)',
@@ -136,8 +169,8 @@ export default function Topbar() {
                       }}
                       style={{
                         padding: '0.75rem 1rem',
-                        borderBottom: '1px solid rgba(255,255,255,0.04)',
-                        background: n.is_read ? 'transparent' : 'rgba(99, 102, 241, 0.08)',
+                        borderBottom: '1px solid var(--border-color)',
+                        background: n.is_read ? 'transparent' : 'var(--primary-light)',
                         cursor: 'pointer'
                       }}
                     >
@@ -164,7 +197,7 @@ export default function Topbar() {
             width: '36px',
             height: '36px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, var(--accent-purple), var(--primary))',
+            background: 'linear-gradient(135deg, var(--primary), var(--accent-purple))',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
