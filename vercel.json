@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "buildCommand": "cd frontend 2>/dev/null || true; npm install && npm run build",
-  "outputDirectory": "frontend/dist",
+  "buildCommand": "cd frontend 2>/dev/null || true; npm install && npm run build && cp -r dist ../ 2>/dev/null || true",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/api/(.*)",
