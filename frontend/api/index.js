@@ -185,9 +185,45 @@ app.put('/api/notifications/*', (req, res) => {
   return res.json({ success: true, message: 'Notification updated.' });
 });
 
+app.get('/api/gamification/leaderboard', (req, res) => {
+  return res.json({
+    success: true,
+    data: [
+      { id: 1, rank: 1, name: 'Aarav Sharma', course: 'BCA 4th Sem', completedCount: 14, completionRate: 95, points: 680, isCurrentUser: false },
+      { id: 2, rank: 2, name: 'Ananya Verma', course: 'BCA 4th Sem', completedCount: 12, completionRate: 90, points: 590, isCurrentUser: false },
+      { id: 3, rank: 3, name: 'Student (You)', course: 'BCA 4th Sem', completedCount: 8, completionRate: 85, points: 420, isCurrentUser: true }
+    ]
+  });
+});
+
+app.get('/api/gamification/star-of-month', (req, res) => {
+  return res.json({
+    success: true,
+    data: {
+      name: 'Aarav Sharma',
+      course: 'BCA 4th Sem (Div A)',
+      onTimeRate: 100,
+      completedAssignments: 14,
+      points: 680
+    }
+  });
+});
+
+app.get('/api/gamification/achievements', (req, res) => {
+  return res.json({
+    success: true,
+    data: [
+      { id: 1, name: 'First Milestone', description: 'Complete your first assignment', pointsReward: 50, icon: 'Trophy', isUnlocked: true, earnedAt: new Date().toISOString() },
+      { id: 2, name: 'Punctuality Pro', description: 'Submit 5 assignments on time', pointsReward: 100, icon: 'Clock', isUnlocked: true, earnedAt: new Date().toISOString() },
+      { id: 3, name: 'Streak Master', description: 'Maintain a 3-day active streak', pointsReward: 150, icon: 'Flame', isUnlocked: false }
+    ]
+  });
+});
+
 app.all('/api/*', (req, res) => {
   res.json({ success: true, message: 'API Endpoint active.' });
 });
+
 
 
 module.exports = app;
