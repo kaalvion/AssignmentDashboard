@@ -40,23 +40,24 @@ export default function Countdown({ deadline, compact = false }) {
   return (
     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
       {timeLeft.days > 0 && (
-        <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.05)', padding: '0.35rem 0.65rem', borderRadius: '6px' }}>
+        <div style={{ textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '0.4rem 0.75rem', borderRadius: '8px' }}>
           <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--primary)' }}>{timeLeft.days}</div>
-          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>DAYS</div>
+          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>DAYS</div>
         </div>
       )}
-      <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.05)', padding: '0.35rem 0.65rem', borderRadius: '6px' }}>
+      <div style={{ textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '0.4rem 0.75rem', borderRadius: '8px' }}>
         <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--primary)' }}>{timeLeft.hours}</div>
-        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>HOURS</div>
+        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>HOURS</div>
       </div>
-      <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.05)', padding: '0.35rem 0.65rem', borderRadius: '6px' }}>
+      <div style={{ textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '0.4rem 0.75rem', borderRadius: '8px' }}>
         <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--primary)' }}>{timeLeft.minutes}</div>
-        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>MINS</div>
+        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>MINS</div>
       </div>
-      <div style={{ textAlign: 'center', background: 'rgba(255,255,255,0.05)', padding: '0.35rem 0.65rem', borderRadius: '6px' }}>
+      <div style={{ textAlign: 'center', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '0.4rem 0.75rem', borderRadius: '8px' }}>
         <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--primary)' }}>{timeLeft.seconds}</div>
-        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>SECS</div>
+        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600 }}>SECS</div>
       </div>
     </div>
   );
+
 }

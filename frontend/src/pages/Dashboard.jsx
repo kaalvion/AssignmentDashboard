@@ -120,7 +120,7 @@ export default function Dashboard() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%)',
+        background: 'linear-gradient(135deg, var(--primary-light) 0%, var(--bg-card) 100%)',
         border: '1px solid var(--border-highlight)',
         borderRadius: 'var(--radius-md)',
         padding: '1.5rem 1.75rem'
@@ -193,9 +193,10 @@ export default function Dashboard() {
       {todaysPriority ? (
         <div className="glass-card" style={{
           borderLeft: '4px solid var(--primary)',
-          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(99, 102, 241, 0.08) 100%)',
+          background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--primary-light) 100%)',
           padding: '1.75rem'
         }}>
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Sparkles size={20} style={{ color: 'var(--primary)' }} />
