@@ -21,16 +21,29 @@ export default function AssignmentForm() {
     notes: ''
   });
 
+  const defaultSubjects = [
+    { id: 1, name: 'Computer Networks', code: 'CS401' },
+    { id: 2, name: 'Database Management Systems', code: 'CS402' },
+    { id: 3, name: 'Web Technologies', code: 'CS403' },
+    { id: 4, name: 'Software Engineering', code: 'CS404' },
+    { id: 5, name: 'Operating Systems', code: 'CS405' }
+  ];
+
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
         const res = await api.get('/assignments/subjects');
-        if (res.success && res.data.length > 0) {
+        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
           setSubjects(res.data);
           setFormData(prev => ({ ...prev, subject_id: res.data[0].id }));
+        } else {
+          setSubjects(defaultSubjects);
+          setFormData(prev => ({ ...prev, subject_id: defaultSubjects[0].id }));
         }
       } catch (err) {
-        console.error('Failed to load subjects:', err);
+        console.warn('Failed to load subjects from API, using defaults:', err);
+        setSubjects(defaultSubjects);
+        setFormData(prev => ({ ...prev, subject_id: defaultSubjects[0].id }));
       }
     };
 
@@ -43,6 +56,7 @@ export default function AssignmentForm() {
     setFormData(prev => ({ ...prev, deadline: isoDeadline }));
     fetchSubjects();
   }, []);
+
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

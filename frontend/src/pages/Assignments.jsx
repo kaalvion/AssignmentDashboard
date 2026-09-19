@@ -27,6 +27,14 @@ export default function Assignments() {
   const [difficulty, setDifficulty] = useState('');
   const [sort, setSort] = useState('priority');
 
+  const defaultSubjects = [
+    { id: 1, name: 'Computer Networks', code: 'CS401' },
+    { id: 2, name: 'Database Management Systems', code: 'CS402' },
+    { id: 3, name: 'Web Technologies', code: 'CS403' },
+    { id: 4, name: 'Software Engineering', code: 'CS404' },
+    { id: 5, name: 'Operating Systems', code: 'CS405' }
+  ];
+
   const fetchAssignments = async () => {
     try {
       setLoading(true);
@@ -38,18 +46,26 @@ export default function Assignments() {
       if (sort) params.append('sort', sort);
 
       const [assignRes, subRes] = await Promise.all([
-        api.get(`/assignments?${params.toString()}`),
-        api.get('/assignments/subjects')
+        api.get(`/assignments?${params.toString()}`).catch(() => null),
+        api.get('/assignments/subjects').catch(() => null)
       ]);
 
-      if (assignRes.success) setAssignments(assignRes.data);
-      if (subRes.success) setSubjects(subRes.data);
+      if (assignRes && assignRes.success && Array.isArray(assignRes.data)) {
+        setAssignments(assignRes.data);
+      }
+      if (subRes && subRes.success && Array.isArray(subRes.data) && subRes.data.length > 0) {
+        setSubjects(subRes.data);
+      } else {
+        setSubjects(defaultSubjects);
+      }
     } catch (err) {
       console.error('Failed to fetch assignments:', err);
+      setSubjects(defaultSubjects);
     } finally {
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     fetchAssignments();
