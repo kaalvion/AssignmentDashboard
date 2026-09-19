@@ -35,6 +35,45 @@ export default function Assignments() {
     { id: 5, name: 'Operating Systems', code: 'CS405' }
   ];
 
+  const defaultAssignments = [
+    {
+      id: 101,
+      subject_name: 'Computer Networks',
+      subject_color: 'var(--primary)',
+      title: 'TCP/IP Socket Programming Project',
+      difficulty: 'MEDIUM',
+      deadline: new Date(Date.now() + 86400000 * 2).toISOString(),
+      priority_level: 'HIGH',
+      risk_level: 'MEDIUM',
+      progress: 40,
+      estimated_hours: 4.5
+    },
+    {
+      id: 102,
+      subject_name: 'Database Management',
+      subject_color: 'var(--accent-purple)',
+      title: 'Relational Schema Optimization & Indexing',
+      difficulty: 'HARD',
+      deadline: new Date(Date.now() + 86400000 * 4).toISOString(),
+      priority_level: 'HIGH',
+      risk_level: 'LOW',
+      progress: 20,
+      estimated_hours: 3.0
+    },
+    {
+      id: 103,
+      subject_name: 'Web Technologies',
+      subject_color: 'var(--accent-cyan)',
+      title: 'React & REST API Assignment',
+      difficulty: 'EASY',
+      deadline: new Date(Date.now() + 86400000 * 7).toISOString(),
+      priority_level: 'MEDIUM',
+      risk_level: 'LOW',
+      progress: 60,
+      estimated_hours: 2.0
+    }
+  ];
+
   const fetchAssignments = async () => {
     try {
       setLoading(true);
@@ -60,7 +99,12 @@ export default function Assignments() {
         localItems = JSON.parse(localStorage.getItem('user_created_assignments') || '[]');
       } catch (e) {}
 
-      setAssignments([...localItems, ...fetchedItems]);
+      const combined = [...localItems, ...fetchedItems];
+      if (combined.length > 0) {
+        setAssignments(combined);
+      } else {
+        setAssignments(defaultAssignments);
+      }
 
       if (subRes && subRes.success && Array.isArray(subRes.data) && subRes.data.length > 0) {
         setSubjects(subRes.data);
@@ -73,12 +117,13 @@ export default function Assignments() {
       try {
         localItems = JSON.parse(localStorage.getItem('user_created_assignments') || '[]');
       } catch (e) {}
-      setAssignments(localItems);
+      setAssignments(localItems.length > 0 ? localItems : defaultAssignments);
       setSubjects(defaultSubjects);
     } finally {
       setLoading(false);
     }
   };
+
 
 
 
