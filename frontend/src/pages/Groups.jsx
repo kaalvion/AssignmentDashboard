@@ -64,10 +64,27 @@ export default function Groups() {
     }
   };
 
+  const getRegisteredGroupsRegistry = () => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('all_registered_groups') || '[]');
+      return [...stored, ...defaultGroups];
+    } catch (e) {
+      return defaultGroups;
+    }
+  };
+
+  const registerGroupInRegistry = (grp) => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('all_registered_groups') || '[]');
+      const filtered = stored.filter(g => g.code !== grp.code && g.id !== grp.id);
+      localStorage.setItem('all_registered_groups', JSON.stringify([grp, ...filtered]));
+    } catch (e) {}
+  };
+
   const saveLocalGroup = (grp) => {
     try {
       const existing = getSavedLocalGroups();
-      const filtered = existing.filter(g => g.id !== grp.id);
+      const filtered = existing.filter(g => g.id !== grp.id && g.code !== grp.code);
       localStorage.setItem('user_created_groups', JSON.stringify([grp, ...filtered]));
     } catch (e) {}
   };
@@ -88,7 +105,7 @@ export default function Groups() {
         setGroups(combined);
         setSelectedGroup(prev => {
           if (prev) {
-            const found = combined.find(g => String(g.id) === String(prev.id));
+            const found = combined.find(g => String(g.id) === String(prev.id) || g.code === prev.code);
             if (found) return found;
           }
           return combined[0];
@@ -130,19 +147,21 @@ export default function Groups() {
     e.preventDefault();
     if (!groupName.trim()) return;
 
+    const code = `GRP-${groupName.replace(/\s+/g, '').slice(0, 4).toUpperCase()}${Math.floor(100 + Math.random() * 900)}`;
     const newGrp = {
       id: Date.now(),
       name: groupName,
-      code: `GRP-${groupName.slice(0, 4).toUpperCase()}${Math.floor(100 + Math.random() * 900)}`,
+      code: code,
       description: groupDesc || 'Custom team study group.',
       member_count: 1,
       groupProgress: 0,
       members: [
-        { id: 101, name: 'Student (You)', role: 'LEADER' }
+        { id: Date.now(), name: 'Student (You)', role: 'LEADER' }
       ],
       tasks: []
     };
 
+    registerGroupInRegistry(newGrp);
     saveLocalGroup(newGrp);
 
     try {
@@ -159,29 +178,49 @@ export default function Groups() {
 
   const handleJoinGroup = async (e) => {
     e.preventDefault();
-    if (!joinCode.trim()) return;
+    const cleanCode = joinCode.trim().toUpperCase();
+    if (!cleanCode) return;
 
-    const joinedGrp = {
-      id: Date.now(),
-      name: `Study Squad (${joinCode.toUpperCase()})`,
-      code: joinCode.toUpperCase(),
-      description: 'Collaborative team coursework.',
-      member_count: 2,
-      groupProgress: 25,
-      members: [
-        { id: 101, name: 'Student (You)', role: 'MEMBER' },
-        { id: 201, name: 'Group Admin', role: 'LEADER' }
-      ],
-      tasks: []
-    };
+    const allRegistry = getRegisteredGroupsRegistry();
+    const matchedGroup = allRegistry.find(g => g.code.toUpperCase() === cleanCode);
 
+    let joinedGrp;
+    if (matchedGroup) {
+      // Preserve exact original group name, description, tasks, and existing members!
+      const userMember = { id: Date.now(), name: 'Student (You)', role: 'MEMBER' };
+      const hasMember = matchedGroup.members.some(m => m.name === 'Student (You)');
+      const updatedMembers = hasMember ? matchedGroup.members : [...matchedGroup.members, userMember];
+
+      joinedGrp = {
+        ...matchedGroup,
+        members: updatedMembers,
+        member_count: updatedMembers.length
+      };
+    } else {
+      joinedGrp = {
+        id: Date.now(),
+        name: `Study Squad (${cleanCode})`,
+        code: cleanCode,
+        description: 'Collaborative team coursework.',
+        member_count: 2,
+        groupProgress: 25,
+        members: [
+          { id: 100, name: 'Group Founder', role: 'LEADER' },
+          { id: 101, name: 'Student (You)', role: 'MEMBER' }
+        ],
+        tasks: []
+      };
+    }
+
+    registerGroupInRegistry(joinedGrp);
     saveLocalGroup(joinedGrp);
 
     try {
-      await api.post('/groups/join', { code: joinCode }).catch(() => null);
+      await api.post('/groups/join', { code: cleanCode }).catch(() => null);
     } catch (err) {}
 
-    const updated = [joinedGrp, ...groups];
+    const filtered = groups.filter(g => g.code !== joinedGrp.code);
+    const updated = [joinedGrp, ...filtered];
     setGroups(updated);
     setSelectedGroup(joinedGrp);
     setJoinCode('');
@@ -208,6 +247,7 @@ export default function Groups() {
       tasks: [...(selectedGroup.tasks || []), newTaskObj]
     };
 
+    registerGroupInRegistry(updatedGroup);
     saveLocalGroup(updatedGroup);
 
     setSelectedGroup(updatedGroup);
@@ -229,11 +269,13 @@ export default function Groups() {
     const groupProgress = updatedTasks.length > 0 ? Math.round((completedCount / updatedTasks.length) * 100) : 0;
 
     const updatedGroup = { ...selectedGroup, tasks: updatedTasks, groupProgress };
+    registerGroupInRegistry(updatedGroup);
     saveLocalGroup(updatedGroup);
 
     setSelectedGroup(updatedGroup);
     setGroups(prev => prev.map(g => g.id === selectedGroup.id ? updatedGroup : g));
   };
+
 
 
   return (
