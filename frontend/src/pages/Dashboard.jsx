@@ -22,25 +22,88 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const computeDashboardFromAssignments = (assignmentsList) => {
+    if (!assignmentsList || assignmentsList.length === 0) {
+      return getFallbackData();
+    }
+
+    const total = assignmentsList.length;
+    const completed = assignmentsList.filter(a => a.status === 'COMPLETED').length;
+    const inProgress = assignmentsList.filter(a => a.status === 'IN_PROGRESS').length;
+    const pending = assignmentsList.filter(a => a.status === 'PENDING' || !a.status).length;
+    const overdue = assignmentsList.filter(a => a.status === 'OVERDUE').length;
+
+    const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const activeAssignments = assignmentsList.filter(a => a.status !== 'COMPLETED');
+    
+    // Sort active assignments by deadline ascending
+    activeAssignments.sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+
+    const todaysPriority = activeAssignments.length > 0 ? activeAssignments[0] : null;
+    const upcomingDeadlines = [...activeAssignments].slice(0, 5);
+
+    return {
+      stats: {
+        total,
+        completed,
+        inProgress,
+        pending,
+        overdue,
+        completionRate,
+        onTimeRate: 100,
+        streak: user?.streak || 3,
+        points: user?.points || 120
+      },
+      todaysPriority,
+      upcomingDeadlines
+    };
+  };
+
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
         setLoading(true);
-        const res = await api.get('/analytics/dashboard');
-        if (res && res.success && res.data) {
-          setData(res.data);
+
+        let localAssignments = [];
+        try {
+          localAssignments = JSON.parse(localStorage.getItem('user_created_assignments') || '[]');
+        } catch (e) {}
+
+        const [dashRes, assignRes] = await Promise.all([
+          api.get('/analytics/dashboard').catch(() => null),
+          api.get('/assignments').catch(() => null)
+        ]);
+
+        let fetchedAssignments = [];
+        if (assignRes && assignRes.success && Array.isArray(assignRes.data)) {
+          fetchedAssignments = assignRes.data;
+        }
+
+        const allUserAssignments = [...localAssignments, ...fetchedAssignments];
+
+        if (allUserAssignments.length > 0) {
+          setData(computeDashboardFromAssignments(allUserAssignments));
+        } else if (dashRes && dashRes.success && dashRes.data) {
+          setData(dashRes.data);
         } else {
           setData(getFallbackData());
         }
       } catch (err) {
-        console.warn('Dashboard API unreachable, loading default metrics');
-        setData(getFallbackData());
+        let localAssignments = [];
+        try {
+          localAssignments = JSON.parse(localStorage.getItem('user_created_assignments') || '[]');
+        } catch (e) {}
+        if (localAssignments.length > 0) {
+          setData(computeDashboardFromAssignments(localAssignments));
+        } else {
+          setData(getFallbackData());
+        }
       } finally {
         setLoading(false);
       }
     };
     fetchDashboard();
-  }, []);
+  }, [user]);
 
   const getFallbackData = () => ({
     stats: {
@@ -88,6 +151,7 @@ export default function Dashboard() {
       }
     ]
   });
+
 
   if (loading) {
     return (
