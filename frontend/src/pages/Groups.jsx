@@ -56,20 +56,52 @@ export default function Groups() {
   // Task form
   const [newTaskTitle, setNewTaskTitle] = useState('');
 
+  const getSavedLocalGroups = () => {
+    try {
+      return JSON.parse(localStorage.getItem('user_created_groups') || '[]');
+    } catch (e) {
+      return [];
+    }
+  };
+
+  const saveLocalGroup = (grp) => {
+    try {
+      const existing = getSavedLocalGroups();
+      const filtered = existing.filter(g => g.id !== grp.id);
+      localStorage.setItem('user_created_groups', JSON.stringify([grp, ...filtered]));
+    } catch (e) {}
+  };
+
   const fetchGroups = async () => {
     try {
       setLoading(true);
+      const localSaved = getSavedLocalGroups();
       const res = await api.get('/groups').catch(() => null);
+
+      let fetchedItems = [];
       if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
-        setGroups(res.data);
-        fetchGroupDetail(res.data[0].id);
+        fetchedItems = res.data;
+      }
+
+      const combined = [...localSaved, ...fetchedItems];
+      if (combined.length > 0) {
+        setGroups(combined);
+        setSelectedGroup(prev => {
+          if (prev) {
+            const found = combined.find(g => String(g.id) === String(prev.id));
+            if (found) return found;
+          }
+          return combined[0];
+        });
       } else {
         setGroups(defaultGroups);
         setSelectedGroup(defaultGroups[0]);
       }
     } catch (err) {
-      setGroups(defaultGroups);
-      setSelectedGroup(defaultGroups[0]);
+      const localSaved = getSavedLocalGroups();
+      const combined = localSaved.length > 0 ? [...localSaved, ...defaultGroups] : defaultGroups;
+      setGroups(combined);
+      setSelectedGroup(combined[0]);
     } finally {
       setLoading(false);
     }
@@ -81,11 +113,11 @@ export default function Groups() {
       if (res && res.success && res.data) {
         setSelectedGroup(res.data);
       } else {
-        const found = groups.find(g => g.id === id) || defaultGroups[0];
+        const found = groups.find(g => String(g.id) === String(id)) || defaultGroups[0];
         setSelectedGroup(found);
       }
     } catch (err) {
-      const found = groups.find(g => g.id === id) || defaultGroups[0];
+      const found = groups.find(g => String(g.id) === String(id)) || defaultGroups[0];
       setSelectedGroup(found);
     }
   };
@@ -111,6 +143,8 @@ export default function Groups() {
       tasks: []
     };
 
+    saveLocalGroup(newGrp);
+
     try {
       await api.post('/groups', { name: groupName, description: groupDesc }).catch(() => null);
     } catch (err) {}
@@ -126,13 +160,10 @@ export default function Groups() {
   const handleJoinGroup = async (e) => {
     e.preventDefault();
     if (!joinCode.trim()) return;
-    try {
-      await api.post('/groups/join', { code: joinCode }).catch(() => null);
-    } catch (err) {}
 
     const joinedGrp = {
       id: Date.now(),
-      name: `Joined Group (${joinCode.toUpperCase()})`,
+      name: `Study Squad (${joinCode.toUpperCase()})`,
       code: joinCode.toUpperCase(),
       description: 'Collaborative team coursework.',
       member_count: 2,
@@ -143,6 +174,12 @@ export default function Groups() {
       ],
       tasks: []
     };
+
+    saveLocalGroup(joinedGrp);
+
+    try {
+      await api.post('/groups/join', { code: joinCode }).catch(() => null);
+    } catch (err) {}
 
     const updated = [joinedGrp, ...groups];
     setGroups(updated);
@@ -171,6 +208,8 @@ export default function Groups() {
       tasks: [...(selectedGroup.tasks || []), newTaskObj]
     };
 
+    saveLocalGroup(updatedGroup);
+
     setSelectedGroup(updatedGroup);
     setGroups(prev => prev.map(g => g.id === selectedGroup.id ? updatedGroup : g));
     setNewTaskTitle('');
@@ -190,9 +229,12 @@ export default function Groups() {
     const groupProgress = updatedTasks.length > 0 ? Math.round((completedCount / updatedTasks.length) * 100) : 0;
 
     const updatedGroup = { ...selectedGroup, tasks: updatedTasks, groupProgress };
+    saveLocalGroup(updatedGroup);
+
     setSelectedGroup(updatedGroup);
     setGroups(prev => prev.map(g => g.id === selectedGroup.id ? updatedGroup : g));
   };
+
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }} className="animate-fade-in">
