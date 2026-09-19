@@ -143,8 +143,51 @@ app.get('/api/analytics/dashboard', (req, res) => {
   });
 });
 
+app.get('/api/analytics/productivity', (req, res) => {
+  return res.json({
+    success: true,
+    data: {
+      statusCounts: {
+        COMPLETED: 1,
+        IN_PROGRESS: 1,
+        PENDING: 1,
+        OVERDUE: 0
+      },
+      subjectDistribution: [
+        { name: 'Computer Networks', total: 1, completed: 0, hours: 4.5 },
+        { name: 'Database Management', total: 1, completed: 0, hours: 3.0 },
+        { name: 'Web Technologies', total: 1, completed: 1, hours: 2.0 }
+      ]
+    }
+  });
+});
+
+app.get('/api/notifications', (req, res) => {
+  return res.json({
+    success: true,
+    data: {
+      notifications: [
+        {
+          id: 1,
+          title: 'Welcome to Assignment Dashboard',
+          message: 'Your workspace is active and synced.',
+          type: 'INFO',
+          is_read: 0,
+          created_at: new Date().toISOString()
+        }
+      ],
+      unreadCount: 1
+    }
+  });
+});
+
+app.put('/api/notifications/*', (req, res) => {
+  return res.json({ success: true, message: 'Notification updated.' });
+});
+
 app.all('/api/*', (req, res) => {
   res.json({ success: true, message: 'API Endpoint active.' });
 });
+
 
 module.exports = app;
