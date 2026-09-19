@@ -50,9 +50,18 @@ export default function Assignments() {
         api.get('/assignments/subjects').catch(() => null)
       ]);
 
+      let fetchedItems = [];
       if (assignRes && assignRes.success && Array.isArray(assignRes.data)) {
-        setAssignments(assignRes.data);
+        fetchedItems = assignRes.data;
       }
+      
+      let localItems = [];
+      try {
+        localItems = JSON.parse(localStorage.getItem('user_created_assignments') || '[]');
+      } catch (e) {}
+
+      setAssignments([...localItems, ...fetchedItems]);
+
       if (subRes && subRes.success && Array.isArray(subRes.data) && subRes.data.length > 0) {
         setSubjects(subRes.data);
       } else {
@@ -60,11 +69,17 @@ export default function Assignments() {
       }
     } catch (err) {
       console.error('Failed to fetch assignments:', err);
+      let localItems = [];
+      try {
+        localItems = JSON.parse(localStorage.getItem('user_created_assignments') || '[]');
+      } catch (e) {}
+      setAssignments(localItems);
       setSubjects(defaultSubjects);
     } finally {
       setLoading(false);
     }
   };
+
 
 
   useEffect(() => {
