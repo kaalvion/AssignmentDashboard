@@ -1,20 +1,24 @@
-const { query } = require('../config/db');
 const { generateStudyPlan } = require('../services/plannerService');
+const { getEffectiveAssignmentsForUser } = require('../services/studentAssignmentService');
+const { formatAssignmentResponse } = require('./assignmentController');
 
 async function getPlanner(req, res) {
   try {
     const userId = req.user.id;
     const { days = 7, max_daily_hours = 4.0 } = req.query;
 
-    const assignments = await query(
-      `SELECT a.*, s.name as subject_name 
-       FROM assignments a
-       JOIN subjects s ON a.subject_id = s.id
-       WHERE a.user_id = ? AND a.status != 'COMPLETED'`,
-      [userId]
-    );
+    const assignments = await getEffectiveAssignmentsForUser(userId);
 
-    const plan = generateStudyPlan(assignments, parseInt(days, 10), parseFloat(max_daily_hours));
+    // Filter out completed assignments in-memory
+    const activeAssignments = assignments
+      .map(doc => formatAssignmentResponse(doc, doc.id))
+      .filter(a => a.status !== 'COMPLETED');
+
+    const plan = generateStudyPlan(
+      activeAssignments,
+      parseInt(days, 10),
+      parseFloat(max_daily_hours)
+    );
 
     return res.json({
       success: true,

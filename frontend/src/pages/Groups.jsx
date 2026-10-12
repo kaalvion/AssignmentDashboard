@@ -55,70 +55,33 @@ export default function Groups() {
 
   // Task form
   const [newTaskTitle, setNewTaskTitle] = useState('');
-
-  const getSavedLocalGroups = () => {
-    try {
-      return JSON.parse(localStorage.getItem('user_created_groups') || '[]');
-    } catch (e) {
-      return [];
-    }
-  };
-
-  const getRegisteredGroupsRegistry = () => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('all_registered_groups') || '[]');
-      return [...stored, ...defaultGroups];
-    } catch (e) {
-      return defaultGroups;
-    }
-  };
-
-  const registerGroupInRegistry = (grp) => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('all_registered_groups') || '[]');
-      const filtered = stored.filter(g => g.code !== grp.code && g.id !== grp.id);
-      localStorage.setItem('all_registered_groups', JSON.stringify([grp, ...filtered]));
-    } catch (e) {}
-  };
-
-  const saveLocalGroup = (grp) => {
-    try {
-      const existing = getSavedLocalGroups();
-      const filtered = existing.filter(g => g.id !== grp.id && g.code !== grp.code);
-      localStorage.setItem('user_created_groups', JSON.stringify([grp, ...filtered]));
-    } catch (e) {}
-  };
+  const [actionError, setActionError] = useState('');
 
   const fetchGroups = async () => {
     try {
       setLoading(true);
-      const localSaved = getSavedLocalGroups();
-      const res = await api.get('/groups').catch(() => null);
-
-      let fetchedItems = [];
-      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
-        fetchedItems = res.data;
-      }
-
-      const combined = [...localSaved, ...fetchedItems];
-      if (combined.length > 0) {
-        setGroups(combined);
-        setSelectedGroup(prev => {
-          if (prev) {
-            const found = combined.find(g => String(g.id) === String(prev.id) || g.code === prev.code);
-            if (found) return found;
-          }
-          return combined[0];
-        });
+      const res = await api.get('/groups');
+      if (res && res.success && Array.isArray(res.data)) {
+        setGroups(res.data);
+        if (res.data.length > 0) {
+          setSelectedGroup(prev => {
+            if (prev) {
+              const found = res.data.find(g => String(g.id) === String(prev.id));
+              if (found) return found;
+            }
+            return res.data[0];
+          });
+        } else {
+          setSelectedGroup(null);
+        }
       } else {
-        setGroups(defaultGroups);
-        setSelectedGroup(defaultGroups[0]);
+        setGroups([]);
+        setSelectedGroup(null);
       }
     } catch (err) {
-      const localSaved = getSavedLocalGroups();
-      const combined = localSaved.length > 0 ? [...localSaved, ...defaultGroups] : defaultGroups;
-      setGroups(combined);
-      setSelectedGroup(combined[0]);
+      console.error('Error fetching groups:', err);
+      setGroups([]);
+      setSelectedGroup(null);
     } finally {
       setLoading(false);
     }
@@ -126,16 +89,12 @@ export default function Groups() {
 
   const fetchGroupDetail = async (id) => {
     try {
-      const res = await api.get(`/groups/${id}`).catch(() => null);
+      const res = await api.get(`/groups/${id}`);
       if (res && res.success && res.data) {
         setSelectedGroup(res.data);
-      } else {
-        const found = groups.find(g => String(g.id) === String(id)) || defaultGroups[0];
-        setSelectedGroup(found);
       }
     } catch (err) {
-      const found = groups.find(g => String(g.id) === String(id)) || defaultGroups[0];
-      setSelectedGroup(found);
+      console.error('Error fetching group detail:', err);
     }
   };
 
@@ -146,85 +105,43 @@ export default function Groups() {
   const handleCreateGroup = async (e) => {
     e.preventDefault();
     if (!groupName.trim()) return;
-
-    const code = `GRP-${groupName.replace(/\s+/g, '').slice(0, 4).toUpperCase()}${Math.floor(100 + Math.random() * 900)}`;
-    const newGrp = {
-      id: Date.now(),
-      name: groupName,
-      code: code,
-      description: groupDesc || 'Custom team study group.',
-      member_count: 1,
-      groupProgress: 0,
-      members: [
-        { id: Date.now(), name: 'Student (You)', role: 'LEADER' }
-      ],
-      tasks: []
-    };
-
-    registerGroupInRegistry(newGrp);
-    saveLocalGroup(newGrp);
+    setActionError('');
 
     try {
-      await api.post('/groups', { name: groupName, description: groupDesc }).catch(() => null);
-    } catch (err) {}
-
-    const updated = [newGrp, ...groups];
-    setGroups(updated);
-    setSelectedGroup(newGrp);
-    setGroupName('');
-    setGroupDesc('');
-    setShowCreateModal(false);
+      const res = await api.post('/groups', { name: groupName.trim(), description: groupDesc.trim() });
+      if (res && res.success && res.data) {
+        setGroupName('');
+        setGroupDesc('');
+        setShowCreateModal(false);
+        await fetchGroups();
+      } else {
+        setActionError(res?.message || 'Failed to create group.');
+      }
+    } catch (err) {
+      console.error('Error creating group:', err);
+      setActionError(err?.message || 'Server error creating group.');
+    }
   };
 
   const handleJoinGroup = async (e) => {
     e.preventDefault();
     const cleanCode = joinCode.trim().toUpperCase();
     if (!cleanCode) return;
-
-    const allRegistry = getRegisteredGroupsRegistry();
-    const matchedGroup = allRegistry.find(g => g.code.toUpperCase() === cleanCode);
-
-    let joinedGrp;
-    if (matchedGroup) {
-      // Preserve exact original group name, description, tasks, and existing members!
-      const userMember = { id: Date.now(), name: 'Student (You)', role: 'MEMBER' };
-      const hasMember = matchedGroup.members.some(m => m.name === 'Student (You)');
-      const updatedMembers = hasMember ? matchedGroup.members : [...matchedGroup.members, userMember];
-
-      joinedGrp = {
-        ...matchedGroup,
-        members: updatedMembers,
-        member_count: updatedMembers.length
-      };
-    } else {
-      joinedGrp = {
-        id: Date.now(),
-        name: `Study Squad (${cleanCode})`,
-        code: cleanCode,
-        description: 'Collaborative team coursework.',
-        member_count: 2,
-        groupProgress: 25,
-        members: [
-          { id: 100, name: 'Group Founder', role: 'LEADER' },
-          { id: 101, name: 'Student (You)', role: 'MEMBER' }
-        ],
-        tasks: []
-      };
-    }
-
-    registerGroupInRegistry(joinedGrp);
-    saveLocalGroup(joinedGrp);
+    setActionError('');
 
     try {
-      await api.post('/groups/join', { code: cleanCode }).catch(() => null);
-    } catch (err) {}
-
-    const filtered = groups.filter(g => g.code !== joinedGrp.code);
-    const updated = [joinedGrp, ...filtered];
-    setGroups(updated);
-    setSelectedGroup(joinedGrp);
-    setJoinCode('');
-    setShowJoinModal(false);
+      const res = await api.post('/groups/join', { code: cleanCode });
+      if (res && res.success) {
+        setJoinCode('');
+        setShowJoinModal(false);
+        await fetchGroups();
+      } else {
+        setActionError(res?.message || 'Invalid join code.');
+      }
+    } catch (err) {
+      console.error('Error joining group:', err);
+      setActionError(err?.message || 'Failed to join study group with this code.');
+    }
   };
 
   const handleAddTask = async (e) => {
@@ -239,41 +156,34 @@ export default function Groups() {
     };
 
     try {
-      await api.post(`/groups/${selectedGroup.id}/tasks`, { title: newTaskTitle }).catch(() => null);
-    } catch (err) {}
-
-    const updatedGroup = {
-      ...selectedGroup,
-      tasks: [...(selectedGroup.tasks || []), newTaskObj]
-    };
-
-    registerGroupInRegistry(updatedGroup);
-    saveLocalGroup(updatedGroup);
-
-    setSelectedGroup(updatedGroup);
-    setGroups(prev => prev.map(g => g.id === selectedGroup.id ? updatedGroup : g));
+      const res = await api.post(`/groups/${selectedGroup.id}/tasks`, { title: newTaskTitle });
+      if (res && res.success && res.data) {
+        const updatedTasks = [...(selectedGroup.tasks || []), res.data];
+        const updatedGroup = { ...selectedGroup, tasks: updatedTasks };
+        setSelectedGroup(updatedGroup);
+        setGroups(prev => prev.map(g => g.id === selectedGroup.id ? updatedGroup : g));
+      }
+    } catch (err) {
+      console.error('Error adding group task:', err);
+    }
     setNewTaskTitle('');
   };
 
   const handleToggleTaskStatus = async (taskId, currentStatus) => {
     const nextStatus = currentStatus === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
     try {
-      await api.put(`/groups/tasks/${taskId}`, { status: nextStatus }).catch(() => null);
-    } catch (err) {}
-
-    const updatedTasks = (selectedGroup.tasks || []).map(t =>
-      t.id === taskId ? { ...t, status: nextStatus } : t
-    );
-
-    const completedCount = updatedTasks.filter(t => t.status === 'COMPLETED').length;
-    const groupProgress = updatedTasks.length > 0 ? Math.round((completedCount / updatedTasks.length) * 100) : 0;
-
-    const updatedGroup = { ...selectedGroup, tasks: updatedTasks, groupProgress };
-    registerGroupInRegistry(updatedGroup);
-    saveLocalGroup(updatedGroup);
-
-    setSelectedGroup(updatedGroup);
-    setGroups(prev => prev.map(g => g.id === selectedGroup.id ? updatedGroup : g));
+      await api.put(`/groups/tasks/${taskId}`, { status: nextStatus });
+      const updatedTasks = (selectedGroup.tasks || []).map(t =>
+        t.id === taskId ? { ...t, status: nextStatus, isCompleted: nextStatus === 'COMPLETED' } : t
+      );
+      const completedCount = updatedTasks.filter(t => t.status === 'COMPLETED').length;
+      const groupProgress = updatedTasks.length > 0 ? Math.round((completedCount / updatedTasks.length) * 100) : 0;
+      const updatedGroup = { ...selectedGroup, tasks: updatedTasks, groupProgress };
+      setSelectedGroup(updatedGroup);
+      setGroups(prev => prev.map(g => g.id === selectedGroup.id ? updatedGroup : g));
+    } catch (err) {
+      console.error('Error updating task status:', err);
+    }
   };
 
 

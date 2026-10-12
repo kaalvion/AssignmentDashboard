@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
-import { Bell, Search, LogOut, Sun, Moon } from 'lucide-react';
+import { Bell, Search, LogOut, Sun, Moon, Clock, Calendar, FileText } from 'lucide-react';
 import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/react';
 
 export default function Topbar() {
@@ -113,19 +113,21 @@ export default function Topbar() {
                 position: 'absolute',
                 top: '-4px',
                 right: '-4px',
-                background: 'var(--badge-critical-bg)',
-                color: 'var(--badge-critical-text)',
-                border: '1px solid var(--badge-critical-border)',
+                background: '#ef4444',
+                color: '#ffffff',
+                border: '2px solid var(--bg-card)',
                 fontSize: '0.65rem',
                 fontWeight: 700,
-                width: '18px',
+                minWidth: '18px',
                 height: '18px',
-                borderRadius: '50%',
+                padding: '0 4px',
+                borderRadius: '9999px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                boxShadow: '0 2px 4px rgba(239, 68, 68, 0.4)'
               }}>
-                {unreadCount}
+                {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
           </button>
@@ -135,8 +137,8 @@ export default function Topbar() {
               position: 'absolute',
               right: 0,
               top: '48px',
-              width: '340px',
-              maxHeight: '420px',
+              width: '360px',
+              maxHeight: '440px',
               background: 'var(--bg-secondary)',
               border: '1px solid var(--border-color)',
               borderRadius: 'var(--radius-md)',
@@ -171,18 +173,54 @@ export default function Topbar() {
                       style={{
                         padding: '0.75rem 1rem',
                         borderBottom: '1px solid var(--border-color)',
-                        background: n.is_read ? 'transparent' : 'var(--primary-light)',
-                        cursor: 'pointer'
+                        background: (n.isRead || n.is_read) ? 'transparent' : 'var(--primary-light)',
+                        cursor: 'pointer',
+                        transition: 'background 0.15s ease'
                       }}
                     >
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
-                        {n.title}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                        {n.message}
-                      </div>
-                      <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>
-                        {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem' }}>
+                        <div style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '8px',
+                          background: 'rgba(239, 68, 68, 0.12)',
+                          color: '#ef4444',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          marginTop: '2px'
+                        }}>
+                          <FileText size={14} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
+                            {n.title}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                            {n.message}
+                          </div>
+                          {n.deadline && (
+                            <div style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              marginTop: '6px',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              background: 'rgba(239, 68, 68, 0.1)',
+                              color: '#ef4444',
+                              fontSize: '0.7rem',
+                              fontWeight: 600
+                            }}>
+                              <Clock size={11} />
+                              <span>Due: {new Date(n.deadline).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                            </div>
+                          )}
+                          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+                            {n.createdAt || n.created_at ? new Date(n.createdAt || n.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))

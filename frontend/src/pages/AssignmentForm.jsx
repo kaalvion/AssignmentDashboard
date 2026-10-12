@@ -114,13 +114,6 @@ export default function AssignmentForm() {
       notes: formData.notes || ''
     };
 
-    try {
-      const localAssignments = JSON.parse(localStorage.getItem('user_created_assignments') || '[]');
-      localStorage.setItem('user_created_assignments', JSON.stringify([newAssignment, ...localAssignments]));
-    } catch (e) {
-      console.error('Failed to write to localStorage', e);
-    }
-
     navigate('/assignments');
   };
 

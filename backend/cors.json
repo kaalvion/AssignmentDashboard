@@ -1,0 +1,15 @@
+[
+  {
+    "origin": [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "https://YOUR-APP-NAME.vercel.app"
+    ],
+    "method": ["GET", "PUT", "OPTIONS"],
+    "responseHeader": [
+      "Content-Type",
+      "x-goog-content-length-range"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]

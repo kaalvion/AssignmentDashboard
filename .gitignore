@@ -1,7 +1,13 @@
 node_modules
 .env
+.env.local
+backend/.env
+serviceAccountKey.json
+*serviceAccount*.json
+backend/serviceAccountKey.json
 dist
 build
 .DS_Store
 *.sqlite
 backend/src/data/database.sqlite
+

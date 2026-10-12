@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, 
   BookOpen, 
@@ -9,25 +10,48 @@ import {
   Trophy, 
   Award, 
   Users, 
-  User, 
-  Settings,
+  CheckSquare,
+  PlusCircle,
+  ShieldCheck,
   GraduationCap
 } from 'lucide-react';
 
-const navItems = [
-  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/assignments', label: 'Assignments', icon: BookOpen },
-  { path: '/calendar', label: 'Calendar', icon: Calendar },
-  { path: '/planner', label: 'Study Planner', icon: BrainCircuit },
-  { path: '/analytics', label: 'Analytics', icon: BarChart2 },
-  { path: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-  { path: '/achievements', label: 'Achievements', icon: Award },
-  { path: '/groups', label: 'Study Groups', icon: Users },
-  { path: '/profile', label: 'Profile', icon: User },
-  { path: '/settings', label: 'Settings', icon: Settings }
-];
-
 export default function Sidebar() {
+  const { user } = useAuth();
+  const role = user?.role || 'STUDENT';
+
+  let navItems = [];
+
+  if (role === 'ADMIN') {
+    navItems = [
+      { path: '/dashboard', label: 'Overview', icon: LayoutDashboard },
+      { path: '/teacher/assignments/new', label: 'Post Assignment', icon: PlusCircle },
+      { path: '/teacher/assignments', label: 'My Assignments', icon: BookOpen },
+      { path: '/admin', label: 'Admin Console', icon: ShieldCheck }
+    ];
+  } else if (role === 'TEACHER') {
+    navItems = [
+      { path: '/dashboard', label: 'Overview', icon: LayoutDashboard },
+      { path: '/teacher/assignments/new', label: 'Post Assignment', icon: PlusCircle },
+      { path: '/teacher/assignments', label: 'My Assignments', icon: BookOpen }
+    ];
+  } else {
+    // STUDENT
+    navItems = [
+      { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { path: '/assignments', label: 'Assignments', icon: BookOpen },
+      { path: '/calendar', label: 'Calendar', icon: Calendar },
+      { path: '/planner', label: 'Study Planner', icon: BrainCircuit },
+      { path: '/analytics', label: 'Analytics', icon: BarChart2 },
+      { path: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+      { path: '/achievements', label: 'Achievements', icon: Award },
+      { path: '/groups', label: 'Study Groups', icon: Users },
+      { path: '/tasks', label: 'My Tasks', icon: CheckSquare }
+    ];
+  }
+
+  const roleBadgeColor = role === 'ADMIN' ? '#f43f5e' : (role === 'TEACHER' ? '#8b5cf6' : '#3b82f6');
+
   return (
     <aside style={{
       width: '260px',
@@ -62,8 +86,10 @@ export default function Sidebar() {
           <GraduationCap size={22} />
         </div>
         <div>
-          <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>Nexus Deadline</h2>
-          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>BCA Productivity SaaS</span>
+          <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>Nexus Dashboard</h2>
+          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Academic Platform
+          </span>
         </div>
       </div>
 
@@ -96,9 +122,27 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Footer info */}
-      <div style={{ padding: '1rem 1.25rem', borderTop: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-        Nexus v1.0 • BCA Mini-Project
+      {/* User Role Badge in Footer */}
+      <div style={{
+        padding: '1rem 1.25rem',
+        borderTop: '1px solid var(--border-color)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        fontSize: '0.75rem',
+        color: 'var(--text-muted)'
+      }}>
+        <span>Role:</span>
+        <span style={{
+          padding: '2px 8px',
+          borderRadius: '12px',
+          background: `${roleBadgeColor}20`,
+          color: roleBadgeColor,
+          fontWeight: 700,
+          letterSpacing: '0.05em'
+        }}>
+          {role}
+        </span>
       </div>
     </aside>
   );

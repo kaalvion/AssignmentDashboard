@@ -1,24 +1,45 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, 
   BookOpen, 
   Calendar, 
   BrainCircuit, 
-  Trophy, 
-  Users 
+  PlusCircle, 
+  ShieldCheck, 
+  Trophy 
 } from 'lucide-react';
 
-const mobileItems = [
-  { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
-  { path: '/assignments', label: 'Tasks', icon: BookOpen },
-  { path: '/planner', label: 'Planner', icon: BrainCircuit },
-  { path: '/calendar', label: 'Calendar', icon: Calendar },
-  { path: '/leaderboard', label: 'Rank', icon: Trophy },
-  { path: '/groups', label: 'Groups', icon: Users }
-];
-
 export default function MobileNavigation() {
+  const { user } = useAuth();
+  const role = user?.role || 'STUDENT';
+
+  let items = [];
+
+  if (role === 'ADMIN') {
+    items = [
+      { path: '/dashboard', label: 'Overview', icon: LayoutDashboard },
+      { path: '/teacher/assignments/new', label: 'Post', icon: PlusCircle },
+      { path: '/teacher/assignments', label: 'My Assigns', icon: BookOpen },
+      { path: '/admin', label: 'Admin', icon: ShieldCheck }
+    ];
+  } else if (role === 'TEACHER') {
+    items = [
+      { path: '/dashboard', label: 'Overview', icon: LayoutDashboard },
+      { path: '/teacher/assignments/new', label: 'Post', icon: PlusCircle },
+      { path: '/teacher/assignments', label: 'My Assigns', icon: BookOpen }
+    ];
+  } else {
+    items = [
+      { path: '/dashboard', label: 'Home', icon: LayoutDashboard },
+      { path: '/assignments', label: 'Assignments', icon: BookOpen },
+      { path: '/planner', label: 'Planner', icon: BrainCircuit },
+      { path: '/calendar', label: 'Calendar', icon: Calendar },
+      { path: '/leaderboard', label: 'Rank', icon: Trophy }
+    ];
+  }
+
   return (
     <nav style={{
       position: 'fixed',
@@ -34,7 +55,7 @@ export default function MobileNavigation() {
       zIndex: 50,
       padding: '0 0.5rem'
     }}>
-      {mobileItems.map(item => {
+      {items.map(item => {
         const Icon = item.icon;
         return (
           <NavLink

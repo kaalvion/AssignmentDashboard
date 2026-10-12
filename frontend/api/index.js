@@ -3,14 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 
-let exec;
-try {
-  exec = require('../../backend/src/config/db').exec;
-} catch (e) {
-  console.warn('Backend DB module not found in frontend api function:', e.message);
-}
-
 const app = express();
+
 
 app.use(cors());
 app.use(express.json());

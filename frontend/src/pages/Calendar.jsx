@@ -62,29 +62,15 @@ export default function AcademicCalendar() {
     const fetchAssignments = async () => {
       try {
         setLoading(true);
-        let localAssignments = [];
-        try {
-          localAssignments = JSON.parse(localStorage.getItem('user_created_assignments') || '[]');
-        } catch (e) {}
-
-        const res = await api.get('/assignments').catch(() => null);
-        let fetchedItems = [];
+        const res = await api.get('/assignments');
         if (res && res.success && Array.isArray(res.data)) {
-          fetchedItems = res.data;
-        }
-
-        const combined = [...localAssignments, ...fetchedItems];
-        if (combined.length > 0) {
-          setAssignments(combined);
+          setAssignments(res.data);
         } else {
-          setAssignments(defaultAssignments);
+          setAssignments([]);
         }
       } catch (err) {
-        let localAssignments = [];
-        try {
-          localAssignments = JSON.parse(localStorage.getItem('user_created_assignments') || '[]');
-        } catch (e) {}
-        setAssignments(localAssignments.length > 0 ? localAssignments : defaultAssignments);
+        console.error('Error fetching calendar assignments:', err);
+        setAssignments([]);
       } finally {
         setLoading(false);
       }

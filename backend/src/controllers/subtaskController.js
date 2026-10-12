@@ -1,70 +1,73 @@
-const { query, get, run } = require('../config/db');
+const { db } = require('../config/firebase');
 const { calculateAssignmentMetrics } = require('../services/priorityService');
-const { awardPoints, POINT_RULES, checkAndAwardAchievements } = require('../services/gamificationService');
-
-async function updateAssignmentProgressFromSubtasks(assignmentId) {
-  const subtasks = await query(`SELECT * FROM subtasks WHERE assignment_id = ?`, [assignmentId]);
-  if (subtasks.length === 0) return;
-
-  const completedCount = subtasks.filter(st => st.is_completed === 1).length;
-  const progressPercent = Math.round((completedCount / subtasks.length) * 100);
-
-  const assignment = await get(`SELECT * FROM assignments WHERE id = ?`, [assignmentId]);
-  if (!assignment) return;
-
-  let newStatus = assignment.status;
-  if (progressPercent === 100 && assignment.status !== 'COMPLETED') {
-    newStatus = 'COMPLETED';
-    await awardPoints(assignment.user_id, POINT_RULES.COMPLETE_ASSIGNMENT, `Completed Assignment: ${assignment.title}`);
-  } else if (progressPercent > 0 && assignment.status === 'PENDING') {
-    newStatus = 'IN_PROGRESS';
-  }
-
-  const updatedMetrics = calculateAssignmentMetrics({
-    ...assignment,
-    progress: progressPercent,
-    status: newStatus
-  });
-
-  await run(
-    `UPDATE assignments 
-     SET progress = ?, status = ?, priority_score = ?, priority_level = ?, risk_level = ? 
-     WHERE id = ?`,
-    [
-      progressPercent,
-      newStatus,
-      updatedMetrics.priorityScore,
-      updatedMetrics.priorityLevel,
-      updatedMetrics.riskLevel,
-      assignmentId
-    ]
-  );
-}
+const { awardPoints, POINT_RULES, checkAndAwardAchievements, awardAssignmentCompletionPoints } = require('../services/gamificationService');
 
 async function addSubtask(req, res) {
   try {
     const { id: assignmentId } = req.params;
     const { title, estimated_minutes } = req.body;
 
-    if (!title) {
+    if (!title || !title.trim()) {
       return res.status(400).json({ success: false, message: 'Subtask title is required.' });
     }
 
-    const assignment = await get(`SELECT id FROM assignments WHERE id = ? AND user_id = ?`, [assignmentId, req.user.id]);
-    if (!assignment) {
+    const docRef = db.collection('assignments').doc(assignmentId);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
       return res.status(404).json({ success: false, message: 'Assignment not found.' });
     }
 
-    const result = await run(
-      `INSERT INTO subtasks (assignment_id, title, estimated_minutes, is_completed) VALUES (?, ?, ?, 0)`,
-      [assignmentId, title, estimated_minutes || 30]
-    );
+    const assignment = doc.data();
+    if (assignment.userId !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Unauthorized.' });
+    }
 
-    await updateAssignmentProgressFromSubtasks(assignmentId);
+    const subtasks = assignment.subtasks || [];
+    const newSubtask = {
+      id: `st_${Date.now()}`,
+      title: title.trim(),
+      estimatedMinutes: estimated_minutes ? Number(estimated_minutes) : 30,
+      estimated_minutes: estimated_minutes ? Number(estimated_minutes) : 30,
+      isCompleted: false,
+      is_completed: 0,
+      createdAt: new Date().toISOString()
+    };
 
-    const created = await get(`SELECT * FROM subtasks WHERE id = ?`, [result.id]);
-    return res.status(201).json({ success: true, data: created });
+    subtasks.push(newSubtask);
+
+    // Recalculate assignment progress
+    const completedCount = subtasks.filter(st => st.isCompleted || st.is_completed === 1).length;
+    const progressPercent = Math.round((completedCount / subtasks.length) * 100);
+
+    let newStatus = assignment.status;
+    if (progressPercent === 100 && assignment.status !== 'COMPLETED') {
+      newStatus = 'COMPLETED';
+    } else if (progressPercent > 0 && assignment.status === 'PENDING') {
+      newStatus = 'IN_PROGRESS';
+    }
+
+    const metrics = calculateAssignmentMetrics({
+      ...assignment,
+      progress: progressPercent,
+      status: newStatus
+    });
+
+    await docRef.update({
+      subtasks,
+      progress: progressPercent,
+      status: newStatus,
+      priorityScore: metrics.priorityScore,
+      priority_score: metrics.priorityScore,
+      priorityLevel: metrics.priorityLevel,
+      priority_level: metrics.priorityLevel,
+      riskLevel: metrics.riskLevel,
+      risk_level: metrics.riskLevel
+    });
+
+    return res.status(201).json({ success: true, data: newSubtask });
   } catch (error) {
+    console.error('Error adding subtask:', error);
     return res.status(500).json({ success: false, message: 'Failed to add subtask.' });
   }
 }
@@ -73,36 +76,80 @@ async function updateSubtask(req, res) {
   try {
     const { subtask_id } = req.params;
     const { title, is_completed } = req.body;
+    const userId = req.user.id;
 
-    const subtask = await get(
-      `SELECT st.*, a.user_id 
-       FROM subtasks st 
-       JOIN assignments a ON st.assignment_id = a.id 
-       WHERE st.id = ? AND a.user_id = ?`,
-      [subtask_id, req.user.id]
-    );
+    // Scan user's assignments for the one containing subtask_id
+    const snap = await db.collection('assignments').where('userId', '==', userId).get();
+    let targetDoc = null;
+    let targetAssignment = null;
+    let targetSubtask = null;
+    let targetIndex = -1;
 
-    if (!subtask) {
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      const subtasks = data.subtasks || [];
+      const idx = subtasks.findIndex(st => st.id === subtask_id);
+      if (idx !== -1) {
+        targetDoc = doc;
+        targetAssignment = data;
+        targetSubtask = subtasks[idx];
+        targetIndex = idx;
+        break;
+      }
+    }
+
+    if (!targetDoc) {
       return res.status(404).json({ success: false, message: 'Subtask not found.' });
     }
 
-    const newlyCompleted = is_completed === 1 && subtask.is_completed === 0;
+    const wasCompleted = Boolean(targetSubtask.isCompleted || targetSubtask.is_completed === 1);
+    const willBeCompleted = is_completed !== undefined ? Boolean(is_completed === 1 || is_completed === true) : wasCompleted;
+    const newlyCompleted = !wasCompleted && willBeCompleted;
 
-    await run(
-      `UPDATE subtasks SET title = ?, is_completed = ? WHERE id = ?`,
-      [title !== undefined ? title : subtask.title, is_completed !== undefined ? is_completed : subtask.is_completed, subtask_id]
-    );
+    if (title !== undefined) targetSubtask.title = title.trim();
+    targetSubtask.isCompleted = willBeCompleted;
+    targetSubtask.is_completed = willBeCompleted ? 1 : 0;
 
-    if (newlyCompleted) {
-      await awardPoints(req.user.id, POINT_RULES.COMPLETE_SUBTASK, `Completed Subtask: ${subtask.title}`);
-      await checkAndAwardAchievements(req.user.id);
+    targetAssignment.subtasks[targetIndex] = targetSubtask;
+
+    // Recalculate progress
+    const subtasks = targetAssignment.subtasks;
+    const completedCount = subtasks.filter(st => st.isCompleted || st.is_completed === 1).length;
+    const progressPercent = Math.round((completedCount / subtasks.length) * 100);
+
+    let newStatus = targetAssignment.status;
+    let completedAt = targetAssignment.completedAt || targetAssignment.completed_at;
+
+    if (progressPercent === 100 && targetAssignment.status !== 'COMPLETED') {
+      newStatus = 'COMPLETED';
+      completedAt = new Date().toISOString();
+    } else if (progressPercent > 0 && targetAssignment.status === 'PENDING') {
+      newStatus = 'IN_PROGRESS';
     }
 
-    await updateAssignmentProgressFromSubtasks(subtask.assignment_id);
+    const metrics = calculateAssignmentMetrics({
+      ...targetAssignment,
+      progress: progressPercent,
+      status: newStatus
+    });
 
-    const updated = await get(`SELECT * FROM subtasks WHERE id = ?`, [subtask_id]);
-    return res.json({ success: true, data: updated });
+    await targetDoc.ref.update({
+      subtasks,
+      progress: progressPercent,
+      status: newStatus,
+      completedAt,
+      completed_at: completedAt,
+      priorityScore: metrics.priorityScore,
+      priority_score: metrics.priorityScore,
+      priorityLevel: metrics.priorityLevel,
+      priority_level: metrics.priorityLevel,
+      riskLevel: metrics.riskLevel,
+      risk_level: metrics.riskLevel
+    });
+
+    return res.json({ success: true, data: targetSubtask });
   } catch (error) {
+    console.error('Error updating subtask:', error);
     return res.status(500).json({ success: false, message: 'Failed to update subtask.' });
   }
 }
@@ -110,23 +157,49 @@ async function updateSubtask(req, res) {
 async function deleteSubtask(req, res) {
   try {
     const { subtask_id } = req.params;
-    const subtask = await get(
-      `SELECT st.*, a.user_id 
-       FROM subtasks st 
-       JOIN assignments a ON st.assignment_id = a.id 
-       WHERE st.id = ? AND a.user_id = ?`,
-      [subtask_id, req.user.id]
-    );
+    const userId = req.user.id;
 
-    if (!subtask) {
+    const snap = await db.collection('assignments').where('userId', '==', userId).get();
+    let targetDoc = null;
+    let targetAssignment = null;
+
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      const subtasks = data.subtasks || [];
+      if (subtasks.some(st => st.id === subtask_id)) {
+        targetDoc = doc;
+        targetAssignment = data;
+        break;
+      }
+    }
+
+    if (!targetDoc) {
       return res.status(404).json({ success: false, message: 'Subtask not found.' });
     }
 
-    await run(`DELETE FROM subtasks WHERE id = ?`, [subtask_id]);
-    await updateAssignmentProgressFromSubtasks(subtask.assignment_id);
+    const updatedSubtasks = (targetAssignment.subtasks || []).filter(st => st.id !== subtask_id);
+    const completedCount = updatedSubtasks.filter(st => st.isCompleted || st.is_completed === 1).length;
+    const progressPercent = updatedSubtasks.length > 0 ? Math.round((completedCount / updatedSubtasks.length) * 100) : targetAssignment.progress;
+
+    const metrics = calculateAssignmentMetrics({
+      ...targetAssignment,
+      progress: progressPercent
+    });
+
+    await targetDoc.ref.update({
+      subtasks: updatedSubtasks,
+      progress: progressPercent,
+      priorityScore: metrics.priorityScore,
+      priority_score: metrics.priorityScore,
+      priorityLevel: metrics.priorityLevel,
+      priority_level: metrics.priorityLevel,
+      riskLevel: metrics.riskLevel,
+      risk_level: metrics.riskLevel
+    });
 
     return res.json({ success: true, message: 'Subtask deleted.' });
   } catch (error) {
+    console.error('Error deleting subtask:', error);
     return res.status(500).json({ success: false, message: 'Failed to delete subtask.' });
   }
 }
@@ -140,19 +213,36 @@ async function addResource(req, res) {
       return res.status(400).json({ success: false, message: 'Title, type, and url/path are required.' });
     }
 
-    const assignment = await get(`SELECT id FROM assignments WHERE id = ? AND user_id = ?`, [assignmentId, req.user.id]);
-    if (!assignment) {
+    const docRef = db.collection('assignments').doc(assignmentId);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
       return res.status(404).json({ success: false, message: 'Assignment not found.' });
     }
 
-    const result = await run(
-      `INSERT INTO resources (assignment_id, title, type, url_or_path, file_size) VALUES (?, ?, ?, ?, ?)`,
-      [assignmentId, title, type, url_or_path, file_size || 0]
-    );
+    const assignment = doc.data();
+    if (assignment.userId !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Unauthorized.' });
+    }
 
-    const created = await get(`SELECT * FROM resources WHERE id = ?`, [result.id]);
-    return res.status(201).json({ success: true, data: created });
+    const resources = assignment.resources || [];
+    const newResource = {
+      id: `res_${Date.now()}`,
+      title: title.trim(),
+      type,
+      urlOrPath: url_or_path,
+      url_or_path,
+      fileSize: file_size ? Number(file_size) : 0,
+      file_size: file_size ? Number(file_size) : 0,
+      createdAt: new Date().toISOString()
+    };
+
+    resources.push(newResource);
+    await docRef.update({ resources });
+
+    return res.status(201).json({ success: true, data: newResource });
   } catch (error) {
+    console.error('Error adding resource:', error);
     return res.status(500).json({ success: false, message: 'Failed to add resource.' });
   }
 }
@@ -160,21 +250,32 @@ async function addResource(req, res) {
 async function deleteResource(req, res) {
   try {
     const { resource_id } = req.params;
-    const resource = await get(
-      `SELECT r.*, a.user_id 
-       FROM resources r 
-       JOIN assignments a ON r.assignment_id = a.id 
-       WHERE r.id = ? AND a.user_id = ?`,
-      [resource_id, req.user.id]
-    );
+    const userId = req.user.id;
 
-    if (!resource) {
+    const snap = await db.collection('assignments').where('userId', '==', userId).get();
+    let targetDoc = null;
+    let targetAssignment = null;
+
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      const resources = data.resources || [];
+      if (resources.some(r => r.id === resource_id)) {
+        targetDoc = doc;
+        targetAssignment = data;
+        break;
+      }
+    }
+
+    if (!targetDoc) {
       return res.status(404).json({ success: false, message: 'Resource not found.' });
     }
 
-    await run(`DELETE FROM resources WHERE id = ?`, [resource_id]);
+    const updatedResources = (targetAssignment.resources || []).filter(r => r.id !== resource_id);
+    await targetDoc.ref.update({ resources: updatedResources });
+
     return res.json({ success: true, message: 'Resource deleted.' });
   } catch (error) {
+    console.error('Error deleting resource:', error);
     return res.status(500).json({ success: false, message: 'Failed to delete resource.' });
   }
 }

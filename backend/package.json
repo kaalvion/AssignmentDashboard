@@ -4,19 +4,21 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/server.js",
+    "seed": "node src/seed.js",
+    "test": "node tests/testFirebase.js && node tests/testAuth.js && node tests/testAssignments.js && node tests/testPlannerAnalytics.js && node tests/testGamification.js && node tests/testGroups.js && node tests/testRoles.js && node tests/testTeacherAssignments.js && node tests/testSubmissions.js && node tests/testPoints.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@clerk/backend": "^3.23.2",
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^12.11.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.3",
-    "sqlite3": "^6.0.1"
+    "firebase-admin": "^13.10.0",
+    "jsonwebtoken": "^9.0.3"
   }
 }

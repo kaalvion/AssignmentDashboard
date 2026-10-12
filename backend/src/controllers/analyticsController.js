@@ -1,5 +1,8 @@
-const { query, get } = require('../config/db');
+const { db } = require('../config/firebase');
 const { generateDeadlineReminders } = require('../services/notificationService');
+const { getEffectiveAssignmentsForUser } = require('../services/studentAssignmentService');
+const { evaluateLazyPenaltiesForStudent } = require('../services/pointsService');
+const { formatAssignmentResponse } = require('./assignmentController');
 
 async function getDashboardData(req, res) {
   try {
@@ -8,15 +11,14 @@ async function getDashboardData(req, res) {
     // Trigger notification reminders check silently
     await generateDeadlineReminders(userId);
 
-    const assignments = await query(
-      `SELECT a.*, s.name as subject_name, s.code as subject_code, s.color as subject_color
-       FROM assignments a
-       JOIN subjects s ON a.subject_id = s.id
-       WHERE a.user_id = ?`,
-      [userId]
-    );
+    const assignmentsList = await getEffectiveAssignmentsForUser(userId);
 
-    const user = await get(`SELECT points, streak FROM users WHERE id = ?`, [userId]);
+    // Lazy evaluation: check and apply missed penalties for past-deadline assignments without submission
+    await evaluateLazyPenaltiesForStudent(userId, assignmentsList);
+
+    const userDoc = await db.collection('users').doc(userId).get();
+    const assignments = assignmentsList.map(doc => formatAssignmentResponse(doc, doc.id));
+    const userData = userDoc.exists ? userDoc.data() : {};
 
     const total = assignments.length;
     const completed = assignments.filter(a => a.status === 'COMPLETED').length;
@@ -25,12 +27,16 @@ async function getDashboardData(req, res) {
     const overdue = assignments.filter(a => a.status === 'OVERDUE').length;
 
     const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
-    
+
     // On-Time Rate
     const completedItems = assignments.filter(a => a.status === 'COMPLETED');
     const onTimeCount = completedItems.filter(a => {
-      if (!a.completed_at || !a.deadline) return true;
-      return new Date(a.completed_at) <= new Date(a.deadline);
+      if (a.submissionStatus) {
+        return a.submissionStatus === 'ON_TIME';
+      }
+      const compDate = a.completedAt || a.completed_at;
+      if (!compDate || !a.deadline) return true;
+      return new Date(compDate) <= new Date(a.deadline);
     }).length;
     const onTimeRate = completedItems.length > 0 ? Math.round((onTimeCount / completedItems.length) * 100) : 100;
 
@@ -41,7 +47,9 @@ async function getDashboardData(req, res) {
     const todaysPriority = activeAssignments.length > 0 ? activeAssignments[0] : null;
 
     // Upcoming Deadlines (sorted by deadline asc)
-    const upcomingDeadlines = [...activeAssignments].sort((a, b) => new Date(a.deadline) - new Date(b.deadline)).slice(0, 5);
+    const upcomingDeadlines = [...activeAssignments]
+      .sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
+      .slice(0, 5);
 
     return res.json({
       success: true,
@@ -54,8 +62,8 @@ async function getDashboardData(req, res) {
           overdue,
           completionRate,
           onTimeRate,
-          streak: user ? user.streak : 0,
-          points: user ? user.points : 0
+          streak: userData.streak !== undefined ? userData.streak : 0,
+          points: userData.points !== undefined ? userData.points : 0
         },
         todaysPriority,
         upcomingDeadlines
@@ -70,13 +78,8 @@ async function getDashboardData(req, res) {
 async function getProductivityAnalytics(req, res) {
   try {
     const userId = req.user.id;
-    const assignments = await query(
-      `SELECT a.*, s.name as subject_name 
-       FROM assignments a
-       JOIN subjects s ON a.subject_id = s.id
-       WHERE a.user_id = ?`,
-      [userId]
-    );
+    const assignmentsList = await getEffectiveAssignmentsForUser(userId);
+    const assignments = assignmentsList.map(doc => formatAssignmentResponse(doc, doc.id));
 
     // Status Distribution
     const statusCounts = {
@@ -89,13 +92,13 @@ async function getProductivityAnalytics(req, res) {
     // Subject Breakdown
     const subjectMap = {};
     assignments.forEach(a => {
-      const sub = a.subject_name || 'Other';
+      const sub = a.subject_name || a.subjectName || 'Other';
       if (!subjectMap[sub]) {
         subjectMap[sub] = { name: sub, total: 0, completed: 0, hours: 0 };
       }
       subjectMap[sub].total += 1;
       if (a.status === 'COMPLETED') subjectMap[sub].completed += 1;
-      subjectMap[sub].hours += a.estimated_hours;
+      subjectMap[sub].hours += (a.estimated_hours || a.estimatedHours || 1.0);
     });
 
     const subjectDistribution = Object.values(subjectMap);
@@ -108,6 +111,7 @@ async function getProductivityAnalytics(req, res) {
       }
     });
   } catch (error) {
+    console.error('Productivity Analytics Error:', error);
     return res.status(500).json({ success: false, message: 'Failed to fetch analytics.' });
   }
 }

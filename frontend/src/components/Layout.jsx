@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import MobileNavigation from './MobileNavigation';
+import StudentOnboardingModal from './StudentOnboardingModal';
+import { useAuth } from '../context/AuthContext';
 
 export default function Layout({ children }) {
+  const { user } = useAuth();
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -12,8 +15,13 @@ export default function Layout({ children }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const needsOnboarding = user && user.role === 'STUDENT' && (
+    user.needsOnboarding || !user.course || !user.semester || !user.division
+  );
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>
+      {needsOnboarding && <StudentOnboardingModal />}
       {!isMobile && <Sidebar />}
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, paddingBottom: isMobile ? '70px' : '0' }}>
