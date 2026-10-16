@@ -9,12 +9,12 @@
     "build": "cd frontend 2>/dev/null || true; npm install && npm run build && cp -r dist ../ 2>/dev/null || true"
   },
   "dependencies": {
-    "@clerk/backend": "^2.18.2",
+    "@clerk/backend": "^3.23.2",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "firebase-admin": "^13.2.0",
+    "firebase-admin": "^13.10.0",
     "jsonwebtoken": "^9.0.3"
   }
 }

@@ -137,6 +137,13 @@ async function login(req, res) {
 
 async function getMe(req, res) {
   try {
+    if (!db) {
+      return res.status(503).json({
+        success: false,
+        message: 'Firebase database is not connected. Please add Firebase credentials to Vercel Environment Variables.'
+      });
+    }
+
     const userDoc = await db.collection('users').doc(req.user.id).get();
     if (!userDoc.exists) {
       const created = await ensureUserDoc(req.user.id, req.user);
@@ -178,6 +185,13 @@ async function getMe(req, res) {
 
 async function updateProfile(req, res) {
   try {
+    if (!db) {
+      return res.status(503).json({
+        success: false,
+        message: 'Firebase database is not connected. Please add Firebase credentials to Vercel Environment Variables.'
+      });
+    }
+
     // Notice: role from req.body is explicitly excluded!
     const { name, course, semester, division, avatarUrl, avatar_url } = req.body;
     const userRef = db.collection('users').doc(req.user.id);

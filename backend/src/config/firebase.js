@@ -8,13 +8,24 @@ require('dotenv').config();
 const storageBucketEnv = process.env.FIREBASE_STORAGE_BUCKET;
 
 if (!admin.apps.length) {
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  let serviceAccount = null;
+
+  if (serviceAccountJson) {
+    try {
+      serviceAccount = typeof serviceAccountJson === 'string' ? JSON.parse(serviceAccountJson) : serviceAccountJson;
+    } catch (e) {
+      console.warn('Failed parsing FIREBASE_SERVICE_ACCOUNT JSON:', e.message);
+    }
+  }
+
+  const projectId = serviceAccount?.project_id || process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = serviceAccount?.client_email || process.env.FIREBASE_CLIENT_EMAIL;
+  let privateKey = serviceAccount?.private_key || process.env.FIREBASE_PRIVATE_KEY;
 
   if (privateKey) {
     // If wrapped in quotes by some env loaders, strip/parse them
-    if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+    if (typeof privateKey === 'string' && privateKey.startsWith('"') && privateKey.endsWith('"')) {
       try {
         privateKey = JSON.parse(privateKey);
       } catch (e) {
@@ -22,7 +33,9 @@ if (!admin.apps.length) {
       }
     }
     // Replace literal escaped newlines with actual newline characters
-    privateKey = privateKey.replace(/\\n/g, '\n');
+    if (typeof privateKey === 'string') {
+      privateKey = privateKey.replace(/\\n/g, '\n');
+    }
   }
 
   if (projectId && clientEmail && privateKey) {

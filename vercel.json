@@ -1,7 +1,12 @@
 {
   "version": 2,
-  "buildCommand": "cd frontend 2>/dev/null || true; npm install && npm run build && cp -r dist ../ 2>/dev/null || true",
+  "buildCommand": "npm --prefix frontend install && npm --prefix frontend run build && cp -r frontend/dist ./dist 2>/dev/null || true",
   "outputDirectory": "dist",
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "backend/**"
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/penalties",
