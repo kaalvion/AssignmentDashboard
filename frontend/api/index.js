@@ -371,14 +371,47 @@ export default async function handler(req, res) {
 
   // 9c. Planner (/api/planner)
   if (pathname.startsWith('/api/planner')) {
+    const daysParam = parseInt(searchParams.get('days') || '7', 10);
+    const maxDailyHours = parseFloat(searchParams.get('max_daily_hours') || '4.0');
+    const now = new Date();
+    const days = [];
+
+    const sampleAssignments = [
+      { assignmentId: 101, title: 'TCP/IP Socket Programming Project', subjectName: 'Computer Networks', allocatedHours: 2.0, priorityLevel: 'HIGH' },
+      { assignmentId: 102, title: 'Relational Schema Optimization & Indexing', subjectName: 'Database Management', allocatedHours: 1.5, priorityLevel: 'HIGH' },
+      { assignmentId: 103, title: 'REST API & Modern Frontend Architecture', subjectName: 'Web Technologies', allocatedHours: 1.5, priorityLevel: 'MEDIUM' },
+      { assignmentId: 104, title: 'Agile Sprint Documentation & UML Diagrams', subjectName: 'Software Engineering', allocatedHours: 1.0, priorityLevel: 'LOW' }
+    ];
+
+    for (let i = 0; i < daysParam; i++) {
+      const d = new Date(now);
+      d.setDate(d.getDate() + i);
+      const dayTasks = i === 0 
+        ? [sampleAssignments[0], sampleAssignments[1]] 
+        : i === 1 
+        ? [sampleAssignments[2]] 
+        : i === 2 
+        ? [sampleAssignments[3]] 
+        : [];
+      const totalHours = dayTasks.reduce((acc, t) => acc + t.allocatedHours, 0);
+
+      days.push({
+        dateStr: d.toISOString().split('T')[0],
+        dayName: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        formattedDate: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        totalAllocatedHours: Number(totalHours.toFixed(1)),
+        tasks: dayTasks
+      });
+    }
+
     return json(200, {
       success: true,
       data: {
-        dailyPlan: [
-          { time: '09:00 - 10:30', title: 'Computer Networks Socket Lab', priority: 'HIGH', completed: false },
-          { time: '11:00 - 12:30', title: 'DBMS Relational Schema Indexing', priority: 'HIGH', completed: true },
-          { time: '14:00 - 15:30', title: 'Web Tech REST API Integration', priority: 'MEDIUM', completed: false }
-        ]
+        totalRequiredHours: 6.0,
+        availableDaysCount: daysParam,
+        maxDailyHours: maxDailyHours,
+        warning: null,
+        days: days
       }
     });
   }
