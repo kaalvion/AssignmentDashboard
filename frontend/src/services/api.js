@@ -77,7 +77,14 @@ api.interceptors.response.use((response) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
   }
-  return Promise.reject(error.response ? error.response.data : { message: 'Network Error' });
+  const errorData = error.response ? error.response.data : null;
+  let message = error.message || 'Network Error: Cannot connect to backend server.';
+  if (typeof errorData === 'string') {
+    message = 'Backend server connection error. Please make sure the backend is running.';
+  } else if (errorData && errorData.message) {
+    message = errorData.message;
+  }
+  return Promise.reject({ message, ...(typeof errorData === 'object' && errorData !== null ? errorData : {}) });
 });
 
 export default api;

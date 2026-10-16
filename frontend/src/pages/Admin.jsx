@@ -16,7 +16,12 @@ import {
   RefreshCw,
   X,
   Save,
-  Lock
+  Lock,
+  Mail,
+  Award,
+  Flame,
+  ShieldCheck,
+  UserCog
 } from 'lucide-react';
 
 export default function Admin() {
@@ -46,7 +51,9 @@ export default function Admin() {
       const url = roleFilter === 'ALL' ? '/admin/users' : `/admin/users?role=${roleFilter}`;
       const res = await api.get(url);
       if (res && res.success) {
-        setUsers(res.data || []);
+        // Sanitize any test artifact tokens
+        const sanitized = (res.data || []).filter(u => !u.id?.startsWith('eyJ') && !u.email?.startsWith('eyJ'));
+        setUsers(sanitized);
       } else {
         setError(res?.message || 'Failed to load users.');
       }
@@ -70,7 +77,7 @@ export default function Admin() {
 
       const res = await api.put(`/admin/users/${userId}/role`, { role: newRole });
       if (res && res.success) {
-        setActionSuccess(`Successfully updated ${userName}'s role to ${newRole}.`);
+        setActionSuccess(`Successfully updated ${userName || 'user'}'s role to ${newRole}.`);
         setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
       } else {
         setActionError(res?.message || 'Failed to update role.');
@@ -129,219 +136,603 @@ export default function Admin() {
     return nameMatch || emailMatch;
   });
 
+  // Calculate high-level directory metrics
+  const totalUsersCount = users.length;
+  const studentCount = users.filter(u => u.role === 'STUDENT').length;
+  const teacherCount = users.filter(u => u.role === 'TEACHER').length;
+  const adminCount = users.filter(u => u.role === 'ADMIN').length;
+
   return (
-    <div className="space-y-6">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-500 mb-2">
-            <ShieldAlert className="w-3.5 h-3.5" />
-            <span>Administrator Console</span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+      {/* Top Header Banner */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '1.25rem',
+        padding: '1.75rem 2rem',
+        borderRadius: 'var(--radius-lg, 20px)',
+        background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(6, 182, 212, 0.08) 100%)',
+        border: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))',
+        backdropFilter: 'blur(16px)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+          <div style={{
+            width: '54px',
+            height: '54px',
+            borderRadius: '16px',
+            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            boxShadow: '0 8px 24px rgba(99, 102, 241, 0.35)',
+            flexShrink: 0
+          }}>
+            <ShieldAlert size={28} />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--color-text-primary)]">
-            User Management & Access Control
-          </h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-            Promote or demote teachers and students, manage student class assignments, and monitor directory accounts.
-          </p>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
+                Admin Console
+              </h1>
+              <span style={{
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                padding: '0.2rem 0.65rem',
+                borderRadius: '9999px',
+                background: 'rgba(99, 102, 241, 0.2)',
+                color: '#818cf8',
+                border: '1px solid rgba(99, 102, 241, 0.45)'
+              }}>
+                ACCESS CONTROL
+              </span>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: '6px 0 0', lineHeight: 1.4 }}>
+              Manage directory accounts, promote or demote teachers and students, and assign locked academic classes.
+            </p>
+          </div>
         </div>
 
         <button
           onClick={fetchUsers}
-          className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-subtle)] text-[var(--color-text-secondary)] self-start sm:self-auto transition-colors"
+          className="btn btn-secondary"
+          style={{
+            padding: '0.75rem 1.4rem',
+            fontSize: '0.9rem',
+            borderRadius: 'var(--radius-md, 14px)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refresh Users</span>
+          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+          <span>Refresh Directory</span>
         </button>
       </div>
 
-      {/* Action alerts */}
+      {/* Directory Metrics KPI Cards */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+        gap: '1.25rem'
+      }}>
+        {/* Total Accounts */}
+        <div className="glass-card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1.35rem 1.5rem' }}>
+          <div style={{
+            width: '46px',
+            height: '46px',
+            borderRadius: '12px',
+            background: 'rgba(139, 92, 246, 0.15)',
+            border: '1px solid rgba(139, 92, 246, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--primary, #8b5cf6)'
+          }}>
+            <Users size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Total Users
+            </div>
+            <div style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
+              {totalUsersCount}
+            </div>
+          </div>
+        </div>
+
+        {/* Students */}
+        <div className="glass-card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1.35rem 1.5rem' }}>
+          <div style={{
+            width: '46px',
+            height: '46px',
+            borderRadius: '12px',
+            background: 'rgba(6, 182, 212, 0.15)',
+            border: '1px solid rgba(6, 182, 212, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--accent-cyan, #06b6d4)'
+          }}>
+            <GraduationCap size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Students
+            </div>
+            <div style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
+              {studentCount}
+            </div>
+          </div>
+        </div>
+
+        {/* Teachers */}
+        <div className="glass-card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1.35rem 1.5rem' }}>
+          <div style={{
+            width: '46px',
+            height: '46px',
+            borderRadius: '12px',
+            background: 'rgba(16, 185, 129, 0.15)',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--accent-emerald, #10b981)'
+          }}>
+            <Briefcase size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Faculty / Teachers
+            </div>
+            <div style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
+              {teacherCount}
+            </div>
+          </div>
+        </div>
+
+        {/* Administrators */}
+        <div className="glass-card" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', padding: '1.35rem 1.5rem' }}>
+          <div style={{
+            width: '46px',
+            height: '46px',
+            borderRadius: '12px',
+            background: 'rgba(99, 102, 241, 0.15)',
+            border: '1px solid rgba(99, 102, 241, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#818cf8'
+          }}>
+            <ShieldCheck size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              System Admins
+            </div>
+            <div style={{ fontSize: '1.65rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}>
+              {adminCount}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Alerts */}
       {actionSuccess && (
-        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-600 dark:text-emerald-400 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
+        <div style={{
+          padding: '0.85rem 1.25rem',
+          borderRadius: 'var(--radius-md, 14px)',
+          background: 'rgba(16, 185, 129, 0.15)',
+          border: '1px solid rgba(16, 185, 129, 0.3)',
+          color: 'var(--accent-emerald, #10b981)',
+          fontSize: '0.875rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <CheckCircle2 size={18} />
             <span>{actionSuccess}</span>
           </div>
-          <button onClick={() => setActionSuccess('')} className="text-xs hover:underline">
+          <button
+            onClick={() => setActionSuccess('')}
+            style={{ fontSize: '0.8rem', fontWeight: 700, textDecoration: 'underline', color: 'inherit' }}
+          >
             Dismiss
           </button>
         </div>
       )}
 
       {actionError && (
-        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-500 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
+        <div style={{
+          padding: '0.85rem 1.25rem',
+          borderRadius: 'var(--radius-md, 14px)',
+          background: 'rgba(244, 63, 94, 0.15)',
+          border: '1px solid rgba(244, 63, 94, 0.3)',
+          color: '#f87171',
+          fontSize: '0.875rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <AlertTriangle size={18} />
             <span>{actionError}</span>
           </div>
-          <button onClick={() => setActionError('')} className="text-xs hover:underline">
+          <button
+            onClick={() => setActionError('')}
+            style={{ fontSize: '0.8rem', fontWeight: 700, textDecoration: 'underline', color: 'inherit' }}
+          >
             Dismiss
           </button>
         </div>
       )}
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]" />
+      {/* Search & Filter Bar */}
+      <div className="glass-card" style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '1rem',
+        padding: '1rem 1.25rem'
+      }}>
+        {/* Search */}
+        <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: '420px' }}>
+          <Search
+            size={18}
+            style={{
+              position: 'absolute',
+              left: '14px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--text-muted)',
+              pointerEvents: 'none'
+            }}
+          />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search user by name or email..."
-            className="w-full pl-9 pr-3 py-2 text-sm rounded-xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+            placeholder="Search directory by name or email..."
+            className="input-field"
+            style={{
+              paddingLeft: '2.6rem',
+              height: '42px',
+              fontSize: '0.9rem',
+              borderRadius: 'var(--radius-sm, 8px)'
+            }}
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Filter className="w-4 h-4 text-[var(--color-text-tertiary)]" />
+        {/* Role Filter */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Filter size={16} style={{ color: 'var(--text-muted)' }} />
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="w-full sm:w-auto px-3 py-2 text-sm rounded-xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+            className="input-field"
+            style={{
+              width: 'auto',
+              minWidth: '170px',
+              height: '42px',
+              fontSize: '0.875rem',
+              borderRadius: 'var(--radius-sm, 8px)',
+              cursor: 'pointer'
+            }}
           >
-            <option value="ALL">All Roles</option>
-            <option value="STUDENT">Students Only</option>
-            <option value="TEACHER">Teachers Only</option>
-            <option value="ADMIN">Admins Only</option>
+            <option value="ALL">All Roles ({users.length})</option>
+            <option value="STUDENT">Students Only ({studentCount})</option>
+            <option value="TEACHER">Faculty Only ({teacherCount})</option>
+            <option value="ADMIN">Admins Only ({adminCount})</option>
           </select>
         </div>
       </div>
 
-      {/* Users Table */}
+      {/* Main Content: Users Directory Table */}
       {loading ? (
-        <div className="p-8 text-center rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)]">
-          <RefreshCw className="w-8 h-8 text-[var(--color-primary)] animate-spin mx-auto" />
-          <p className="text-sm text-[var(--color-text-secondary)] mt-3">Loading user directory...</p>
+        <div className="glass-card" style={{ padding: '4rem 2rem', textAlign: 'center' }}>
+          <RefreshCw size={36} className="animate-spin" style={{ color: 'var(--primary, #8b5cf6)', margin: '0 auto' }} />
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '1rem' }}>
+            Loading user directory...
+          </p>
         </div>
       ) : error ? (
-        <div className="p-8 text-center rounded-2xl bg-[var(--color-surface)] border border-rose-500/20 space-y-3">
-          <AlertTriangle className="w-10 h-10 text-rose-500 mx-auto" />
-          <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Error loading directory</h3>
-          <p className="text-sm text-[var(--color-text-secondary)] max-w-md mx-auto">{error}</p>
+        <div className="glass-card" style={{
+          padding: '3rem 2rem',
+          textAlign: 'center',
+          borderColor: 'rgba(244, 63, 94, 0.4)',
+          background: 'rgba(244, 63, 94, 0.05)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1rem'
+        }}>
+          <AlertTriangle size={42} style={{ color: 'var(--accent-rose, #f43f5e)' }} />
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+            Unable to Load Directory
+          </h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '480px', margin: 0 }}>
+            {error}
+          </p>
           <button
             onClick={fetchUsers}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-[var(--color-primary)] text-white hover:opacity-90"
+            className="btn btn-primary"
+            style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw size={16} />
             <span>Try Again</span>
           </button>
         </div>
       ) : filteredUsers.length === 0 ? (
-        <div className="p-12 text-center rounded-2xl bg-[var(--color-surface)] border border-dashed border-[var(--color-border)] space-y-2">
-          <Users className="w-10 h-10 text-[var(--color-text-tertiary)] mx-auto" />
-          <h3 className="text-base font-semibold text-[var(--color-text-primary)]">No users found</h3>
-          <p className="text-xs text-[var(--color-text-secondary)]">
-            Try adjusting your search query or filter.
+        <div className="glass-card" style={{
+          padding: '4rem 2rem',
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1rem'
+        }}>
+          <Users size={36} style={{ color: 'var(--text-muted)' }} />
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+            No Matching Users Found
+          </h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '380px', margin: 0 }}>
+            No user accounts match your search query or role filter.
           </p>
         </div>
       ) : (
-        <div className="rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+        <div className="glass-card" style={{ padding: '0', overflow: 'hidden', borderRadius: 'var(--radius-lg, 20px)' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
-                <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[11px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">
-                  <th className="py-3 px-4">User</th>
-                  <th className="py-3 px-4">Role</th>
-                  <th className="py-3 px-4">Class Details</th>
-                  <th className="py-3 px-4">Gamification</th>
-                  <th className="py-3 px-4 text-right">Role Actions</th>
-                  <th className="py-3 px-4 text-right">Class Action</th>
+                <tr style={{
+                  background: 'var(--bg-secondary)',
+                  borderBottom: '1px solid var(--border-color)',
+                  color: 'var(--text-secondary)',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  <th style={{ padding: '1.1rem 1.25rem' }}>User Profile</th>
+                  <th style={{ padding: '1.1rem 1.25rem' }}>System Role</th>
+                  <th style={{ padding: '1.1rem 1.25rem' }}>Class Allocation</th>
+                  <th style={{ padding: '1.1rem 1.25rem' }}>Activity & Stats</th>
+                  <th style={{ padding: '1.1rem 1.25rem', textAlign: 'center' }}>Role Management</th>
+                  <th style={{ padding: '1.1rem 1.25rem', textAlign: 'right' }}>Academic Class</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--color-border)] text-sm">
+              <tbody>
                 {filteredUsers.map((u) => {
                   const isSelf = currentUser && (currentUser.id === u.id || currentUser.userId === u.id);
                   const isUpdating = updatingUserId === u.id;
                   const isUserAdmin = u.role === 'ADMIN';
 
+                  // Generate nice avatar fallback initials
+                  const displayName = u.name && u.name !== 'Student' && !u.name.startsWith('eyJ')
+                    ? u.name
+                    : (u.email ? u.email.split('@')[0] : 'User');
+                  
+                  const initials = displayName
+                    .split(/[\s._]+/)
+                    .filter(Boolean)
+                    .map(part => part[0])
+                    .join('')
+                    .toUpperCase()
+                    .slice(0, 2) || 'U';
+
                   return (
                     <tr
                       key={u.id}
-                      className="hover:bg-[var(--color-surface-subtle)]/50 transition-colors"
+                      style={{
+                        borderBottom: '1px solid var(--border-color)',
+                        transition: 'background 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
-                      {/* Name & Email */}
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-[var(--color-text-primary)] flex items-center gap-1.5">
-                          <span>{u.name || 'User'}</span>
-                          {isSelf && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-surface-subtle)] text-[var(--color-text-secondary)] font-normal">
-                              You
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-[var(--color-text-tertiary)]">
-                          {u.email || 'No email registered'}
+                      {/* Name & Email Profile */}
+                      <td style={{ padding: '1.1rem 1.25rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                          <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            background: u.role === 'ADMIN'
+                              ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+                              : u.role === 'TEACHER'
+                              ? 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)'
+                              : 'linear-gradient(135deg, var(--primary, #8b5cf6) 0%, var(--accent-purple, #d0bcff) 100%)',
+                            color: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 700,
+                            fontSize: '0.85rem',
+                            flexShrink: 0,
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                          }}>
+                            {initials}
+                          </div>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                                {displayName}
+                              </span>
+                              {isSelf && (
+                                <span style={{
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  padding: '0.1rem 0.45rem',
+                                  borderRadius: '9999px',
+                                  background: 'var(--primary-light, rgba(139, 92, 246, 0.2))',
+                                  color: 'var(--primary, #8b5cf6)',
+                                  border: '1px solid var(--border-highlight, rgba(139, 92, 246, 0.4))'
+                                }}>
+                                  You
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+                              <Mail size={12} />
+                              <span>{u.email || 'No email registered'}</span>
+                            </div>
+                          </div>
                         </div>
                       </td>
 
-                      {/* Role Badge */}
-                      <td className="py-3 px-4">
+                      {/* System Role Badge */}
+                      <td style={{ padding: '1.1rem 1.25rem' }}>
                         {u.role === 'ADMIN' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
-                            <ShieldAlert className="w-3 h-3" />
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            background: 'rgba(99, 102, 241, 0.15)',
+                            color: '#818cf8',
+                            border: '1px solid rgba(99, 102, 241, 0.35)'
+                          }}>
+                            <ShieldAlert size={13} />
                             <span>ADMIN</span>
                           </span>
                         ) : u.role === 'TEACHER' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                            <Briefcase className="w-3 h-3" />
-                            <span>TEACHER</span>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            background: 'rgba(16, 185, 129, 0.15)',
+                            color: 'var(--accent-emerald, #10b981)',
+                            border: '1px solid rgba(16, 185, 129, 0.35)'
+                          }}>
+                            <Briefcase size={13} />
+                            <span>FACULTY</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                            <GraduationCap className="w-3 h-3" />
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.4rem',
+                            padding: '0.25rem 0.75rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            background: 'rgba(6, 182, 212, 0.15)',
+                            color: 'var(--accent-cyan, #06b6d4)',
+                            border: '1px solid rgba(6, 182, 212, 0.35)'
+                          }}>
+                            <GraduationCap size={13} />
                             <span>STUDENT</span>
                           </span>
                         )}
                       </td>
 
                       {/* Class Details */}
-                      <td className="py-3 px-4">
+                      <td style={{ padding: '1.1rem 1.25rem' }}>
                         {u.course && u.semester && u.division ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-[var(--color-surface-subtle)] border border-[var(--color-border)] text-[var(--color-text-primary)]">
-                            {u.course} - Sem {u.semester} - Div {u.division}
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            padding: '0.3rem 0.75rem',
+                            borderRadius: 'var(--radius-sm, 8px)',
+                            fontSize: '0.82rem',
+                            fontWeight: 600,
+                            background: 'var(--bg-secondary)',
+                            color: 'var(--text-primary)',
+                            border: '1px solid var(--border-color)'
+                          }}>
+                            {u.course} • Sem {u.semester} • Div {u.division}
                           </span>
                         ) : (
-                          <span className="text-xs text-[var(--color-text-tertiary)] italic">
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                             Unassigned
                           </span>
                         )}
                       </td>
 
-                      {/* Gamification */}
-                      <td className="py-3 px-4 text-xs text-[var(--color-text-secondary)]">
-                        <div>{u.points || 0} pts</div>
-                        <div className="text-[11px] text-[var(--color-text-tertiary)]">{u.streak || 0}d streak</div>
+                      {/* Gamification Stats */}
+                      <td style={{ padding: '1.1rem 1.25rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                            <Award size={14} style={{ color: 'var(--accent-amber, #f59e0b)' }} />
+                            <span>{u.points || 0} pts</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                            <Flame size={13} style={{ color: 'var(--accent-rose, #f43f5e)' }} />
+                            <span>{u.streak || 0}d streak</span>
+                          </div>
+                        </div>
                       </td>
 
                       {/* Role Actions */}
-                      <td className="py-3 px-4 text-right">
+                      <td style={{ padding: '1.1rem 1.25rem', textAlign: 'center' }}>
                         {isUserAdmin ? (
-                          <span className="inline-flex items-center gap-1 text-xs text-[var(--color-text-tertiary)] font-medium">
-                            <Lock className="w-3 h-3" />
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            fontSize: '0.75rem',
+                            color: 'var(--text-muted)',
+                            fontWeight: 600
+                          }}>
+                            <Lock size={13} />
                             <span>Protected</span>
                           </span>
                         ) : isSelf ? (
-                          <span className="text-xs text-[var(--color-text-tertiary)] italic">Cannot change self</span>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                            Current User
+                          </span>
                         ) : (
-                          <div className="flex items-center justify-end gap-1.5">
+                          <div>
                             {u.role === 'STUDENT' ? (
                               <button
                                 type="button"
                                 disabled={isUpdating}
-                                onClick={() => handleRoleChange(u.id, 'TEACHER', u.name)}
-                                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors disabled:opacity-50"
+                                onClick={() => handleRoleChange(u.id, 'TEACHER', displayName)}
+                                className="btn"
+                                style={{
+                                  padding: '0.35rem 0.85rem',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  borderRadius: 'var(--radius-sm, 8px)',
+                                  background: 'rgba(16, 185, 129, 0.15)',
+                                  color: 'var(--accent-emerald, #10b981)',
+                                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease'
+                                }}
                               >
-                                {isUpdating ? 'Updating...' : 'Make Teacher'}
+                                {isUpdating ? 'Updating...' : 'Promote to Teacher'}
                               </button>
                             ) : (
                               <button
                                 type="button"
                                 disabled={isUpdating}
-                                onClick={() => handleRoleChange(u.id, 'STUDENT', u.name)}
-                                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 border border-blue-500/20 transition-colors disabled:opacity-50"
+                                onClick={() => handleRoleChange(u.id, 'STUDENT', displayName)}
+                                className="btn"
+                                style={{
+                                  padding: '0.35rem 0.85rem',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 700,
+                                  borderRadius: 'var(--radius-sm, 8px)',
+                                  background: 'rgba(6, 182, 212, 0.15)',
+                                  color: 'var(--accent-cyan, #06b6d4)',
+                                  border: '1px solid rgba(6, 182, 212, 0.35)',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease'
+                                }}
                               >
-                                {isUpdating ? 'Updating...' : 'Make Student'}
+                                {isUpdating ? 'Updating...' : 'Demote to Student'}
                               </button>
                             )}
                           </div>
@@ -349,15 +740,24 @@ export default function Admin() {
                       </td>
 
                       {/* Class Edit Action */}
-                      <td className="py-3 px-4 text-right">
+                      <td style={{ padding: '1.1rem 1.25rem', textAlign: 'right' }}>
                         <button
                           type="button"
                           onClick={() => openClassEditModal(u)}
                           title="Edit Class Details"
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg border border-[var(--color-border)] hover:bg-[var(--color-surface-subtle)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                          className="btn btn-secondary"
+                          style={{
+                            padding: '0.45rem 0.85rem',
+                            fontSize: '0.78rem',
+                            fontWeight: 600,
+                            borderRadius: 'var(--radius-sm, 8px)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.4rem'
+                          }}
                         >
-                          <Edit3 className="w-3 h-3" />
-                          <span>Edit Class</span>
+                          <Edit3 size={14} />
+                          <span>Assign Class</span>
                         </button>
                       </td>
                     </tr>
@@ -371,35 +771,78 @@ export default function Admin() {
 
       {/* Edit Student Class Modal */}
       {editingStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md p-6 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
-                  Edit Class Assignment
-                </h3>
-                <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-                  Updating class for: <span className="font-semibold text-[var(--color-text-primary)]">{editingStudent.name || editingStudent.email}</span>
-                </p>
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 19, 28, 0.85)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1.5rem'
+        }}>
+          <div className="glass-card" style={{
+            maxWidth: '500px',
+            width: '100%',
+            padding: '2rem',
+            borderRadius: 'var(--radius-lg, 20px)',
+            boxShadow: 'var(--shadow-md)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.5rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '12px',
+                  background: 'var(--primary-light, rgba(139, 92, 246, 0.2))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--primary, #8b5cf6)'
+                }}>
+                  <UserCog size={22} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                    Override Class Assignment
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: '3px 0 0' }}>
+                    Student: <strong style={{ color: 'var(--text-primary)' }}>{editingStudent.name || editingStudent.email}</strong>
+                  </p>
+                </div>
               </div>
+
               <button
                 type="button"
                 onClick={() => setEditingStudent(null)}
-                className="p-1 rounded-lg hover:bg-[var(--color-surface-subtle)] text-[var(--color-text-tertiary)]"
+                style={{
+                  color: 'var(--text-muted)',
+                  padding: '4px',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
               >
-                <X className="w-5 h-5" />
+                <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleSaveClass} className="space-y-4">
+            <form onSubmit={handleSaveClass} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div>
-                <label className="block text-xs font-semibold text-[var(--color-text-secondary)] mb-1 uppercase tracking-wider">
-                  Course
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                  Course / Program
                 </label>
                 <select
                   value={editCourse}
                   onChange={(e) => setEditCourse(e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded-xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                  className="input-field"
+                  style={{ width: '100%', height: '42px', fontSize: '0.9rem', borderRadius: 'var(--radius-sm, 8px)' }}
                 >
                   {COURSE_OPTIONS.map((c) => (
                     <option key={c} value={c}>
@@ -409,62 +852,74 @@ export default function Admin() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-[var(--color-text-secondary)] mb-1 uppercase tracking-wider">
-                  Semester
-                </label>
-                <select
-                  value={editSemester}
-                  onChange={(e) => setEditSemester(e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded-xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                >
-                  {SEMESTER_OPTIONS.map((s) => (
-                    <option key={s} value={s}>
-                      Semester {s}
-                    </option>
-                  ))}
-                </select>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                    Semester
+                  </label>
+                  <select
+                    value={editSemester}
+                    onChange={(e) => setEditSemester(e.target.value)}
+                    className="input-field"
+                    style={{ width: '100%', height: '42px', fontSize: '0.9rem', borderRadius: 'var(--radius-sm, 8px)' }}
+                  >
+                    {SEMESTER_OPTIONS.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                    Division / Section
+                  </label>
+                  <select
+                    value={editDivision}
+                    onChange={(e) => setEditDivision(e.target.value)}
+                    className="input-field"
+                    style={{ width: '100%', height: '42px', fontSize: '0.9rem', borderRadius: 'var(--radius-sm, 8px)' }}
+                  >
+                    {DIVISION_OPTIONS.map((d) => (
+                      <option key={d} value={d}>
+                        Division {d}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-[var(--color-text-secondary)] mb-1 uppercase tracking-wider">
-                  Division
-                </label>
-                <select
-                  value={editDivision}
-                  onChange={(e) => setEditDivision(e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded-xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                >
-                  {DIVISION_OPTIONS.map((d) => (
-                    <option key={d} value={d}>
-                      Division {d}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--color-border)]">
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.75rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
                 <button
                   type="button"
                   disabled={savingClass}
                   onClick={() => setEditingStudent(null)}
-                  className="px-4 py-2 text-xs font-medium rounded-xl border border-[var(--color-border)] hover:bg-[var(--color-surface-subtle)] text-[var(--color-text-secondary)] disabled:opacity-50"
+                  className="btn btn-secondary"
+                  style={{ padding: '0.65rem 1.25rem', fontSize: '0.875rem' }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingClass}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-[var(--color-primary)] text-white hover:opacity-90 disabled:opacity-50"
+                  className="btn btn-primary"
+                  style={{
+                    padding: '0.65rem 1.4rem',
+                    fontSize: '0.875rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
                 >
                   {savingClass ? (
                     <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <RefreshCw size={15} className="animate-spin" />
                       <span>Saving...</span>
                     </>
                   ) : (
                     <>
-                      <Save className="w-3.5 h-3.5" />
+                      <Save size={15} />
                       <span>Save Changes</span>
                     </>
                   )}

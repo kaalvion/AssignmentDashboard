@@ -13,7 +13,9 @@ import {
   Filter,
   Download,
   Users,
-  RefreshCw
+  RefreshCw,
+  Award,
+  BookOpen
 } from 'lucide-react';
 
 export default function TeacherSubmissions() {
@@ -58,7 +60,6 @@ export default function TeacherSubmissions() {
       setDownloadError('');
       const res = await api.get(`/teacher/assignments/${id}/submissions/${studentId}/download-url`);
       if (res && res.success && res.data?.downloadUrl) {
-        // Open the signed download URL in a new browser tab
         window.open(res.data.downloadUrl, '_blank', 'noopener,noreferrer');
       } else {
         setDownloadError(`Could not generate download link for ${studentName}: ${res?.message || 'Storage error'}`);
@@ -75,29 +76,73 @@ export default function TeacherSubmissions() {
     switch (status) {
       case 'ON_TIME':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            <CheckCircle2 className="w-3.5 h-3.5" />
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            padding: '0.25rem 0.65rem',
+            borderRadius: '9999px',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            background: 'rgba(16, 185, 129, 0.15)',
+            color: 'var(--accent-emerald, #10b981)',
+            border: '1px solid rgba(16, 185, 129, 0.3)'
+          }}>
+            <CheckCircle2 size={13} />
             <span>On Time</span>
           </span>
         );
       case 'LATE':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-            <Clock className="w-3.5 h-3.5" />
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            padding: '0.25rem 0.65rem',
+            borderRadius: '9999px',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            background: 'rgba(245, 158, 11, 0.15)',
+            color: 'var(--accent-amber, #f59e0b)',
+            border: '1px solid rgba(245, 158, 11, 0.3)'
+          }}>
+            <Clock size={13} />
             <span>Late</span>
           </span>
         );
       case 'OVERDUE':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-500 border border-rose-500/20">
-            <AlertTriangle className="w-3.5 h-3.5" />
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            padding: '0.25rem 0.65rem',
+            borderRadius: '9999px',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            background: 'rgba(244, 63, 94, 0.15)',
+            color: 'var(--accent-rose, #f43f5e)',
+            border: '1px solid rgba(244, 63, 94, 0.3)'
+          }}>
+            <AlertTriangle size={13} />
             <span>Overdue (Missed)</span>
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--color-surface-subtle)] text-[var(--color-text-tertiary)] border border-[var(--color-border)]">
-            <Clock className="w-3.5 h-3.5" />
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            padding: '0.25rem 0.65rem',
+            borderRadius: '9999px',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            background: 'var(--bg-secondary)',
+            color: 'var(--text-muted)',
+            border: '1px solid var(--border-color)'
+          }}>
+            <Clock size={13} />
             <span>Pending</span>
           </span>
         );
@@ -129,30 +174,56 @@ export default function TeacherSubmissions() {
   });
 
   return (
-    <div className="space-y-6">
-      {/* Back button & Assignment summary */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="space-y-1">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+      {/* Header Banner */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '1.25rem',
+        padding: '1.75rem 2rem',
+        borderRadius: 'var(--radius-lg, 20px)',
+        background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(6, 182, 212, 0.08) 100%)',
+        border: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))',
+        backdropFilter: 'blur(16px)'
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <Link
             to="/teacher/assignments"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors mb-1"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              color: 'var(--primary, #8b5cf6)',
+              marginBottom: '4px'
+            }}
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft size={16} />
             <span>Back to My Assignments</span>
           </Link>
 
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--color-text-primary)]">
+          <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
             {data?.title || 'Assignment Submissions'}
           </h1>
 
           {data?.targetClass && (
-            <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)] mt-1">
-              <span className="px-2 py-0.5 rounded-full bg-[var(--color-surface-subtle)] border border-[var(--color-border)] font-medium">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              <span style={{
+                padding: '0.2rem 0.6rem',
+                borderRadius: '9999px',
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
+                fontWeight: 600,
+                color: 'var(--text-primary)'
+              }}>
                 {data.targetClass.course} • Sem {data.targetClass.semester} • Div {data.targetClass.division}
               </span>
               <span>•</span>
-              <span className="flex items-center gap-1">
-                <Users className="w-3.5 h-3.5" />
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600, color: 'var(--accent-emerald, #10b981)' }}>
+                <Users size={15} />
                 {data.submittedCount || 0} of {data.totalStudents || 0} Submitted
               </span>
             </div>
@@ -162,47 +233,98 @@ export default function TeacherSubmissions() {
         <button
           onClick={fetchSubmissions}
           title="Refresh submissions"
-          className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-subtle)] text-[var(--color-text-secondary)] self-start sm:self-auto transition-colors"
+          className="btn btn-secondary"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.65rem 1.1rem',
+            fontSize: '0.875rem',
+            borderRadius: 'var(--radius-sm, 8px)'
+          }}
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refresh</span>
+          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+          <span>Refresh Data</span>
         </button>
       </div>
 
       {downloadError && (
-        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-500 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
+        <div style={{
+          padding: '0.85rem 1.25rem',
+          borderRadius: 'var(--radius-md, 14px)',
+          background: 'rgba(244, 63, 94, 0.15)',
+          border: '1px solid rgba(244, 63, 94, 0.3)',
+          color: '#f87171',
+          fontSize: '0.85rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertTriangle size={18} />
             <span>{downloadError}</span>
           </div>
           <button
             onClick={() => setDownloadError('')}
-            className="text-xs hover:underline font-medium"
+            style={{ fontSize: '0.8rem', color: '#f87171', fontWeight: 700, textDecoration: 'underline' }}
           >
             Dismiss
           </button>
         </div>
       )}
 
-      {/* Filters & Search */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-tertiary)]" />
+      {/* Filter and Search Bar */}
+      <div className="glass-card" style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '1rem',
+        padding: '1rem 1.25rem'
+      }}>
+        {/* Search */}
+        <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: '420px' }}>
+          <Search
+            size={18}
+            style={{
+              position: 'absolute',
+              left: '14px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--text-muted)',
+              pointerEvents: 'none'
+            }}
+          />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search student name, email, or file..."
-            className="w-full pl-9 pr-3 py-2 text-sm rounded-xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] text-[var(--color-text-primary)] placeholder-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+            placeholder="Search student name, email, or file name..."
+            className="input-field"
+            style={{
+              paddingLeft: '2.6rem',
+              height: '42px',
+              fontSize: '0.9rem',
+              borderRadius: 'var(--radius-sm, 8px)'
+            }}
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Filter className="w-4 h-4 text-[var(--color-text-tertiary)]" />
+        {/* Dropdown Status Filter */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Filter size={16} style={{ color: 'var(--text-muted)' }} />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full sm:w-auto px-3 py-2 text-sm rounded-xl bg-[var(--color-surface-subtle)] border border-[var(--color-border)] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+            className="input-field"
+            style={{
+              width: 'auto',
+              minWidth: '180px',
+              height: '42px',
+              fontSize: '0.875rem',
+              borderRadius: 'var(--radius-sm, 8px)',
+              cursor: 'pointer'
+            }}
           >
             <option value="ALL">All Students ({submissions.length})</option>
             <option value="SUBMITTED">All Submitted</option>
@@ -214,75 +336,138 @@ export default function TeacherSubmissions() {
         </div>
       </div>
 
-      {/* Submissions Table / Cards */}
+      {/* Submissions List */}
       {loading ? (
-        <div className="p-8 text-center rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)]">
-          <RefreshCw className="w-8 h-8 text-[var(--color-primary)] animate-spin mx-auto" />
-          <p className="text-sm text-[var(--color-text-secondary)] mt-3">Loading student submissions...</p>
+        <div className="glass-card" style={{ padding: '4rem 2rem', textAlign: 'center' }}>
+          <RefreshCw size={36} className="animate-spin" style={{ color: 'var(--primary, #8b5cf6)', margin: '0 auto' }} />
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: '1rem' }}>
+            Fetching student submissions...
+          </p>
         </div>
       ) : error ? (
-        <div className="p-8 text-center rounded-2xl bg-[var(--color-surface)] border border-rose-500/20 space-y-3">
-          <AlertTriangle className="w-10 h-10 text-rose-500 mx-auto" />
-          <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Unable to load submissions</h3>
-          <p className="text-sm text-[var(--color-text-secondary)] max-w-md mx-auto">{error}</p>
+        <div className="glass-card" style={{
+          padding: '3rem 2rem',
+          textAlign: 'center',
+          borderColor: 'rgba(244, 63, 94, 0.4)',
+          background: 'rgba(244, 63, 94, 0.05)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1rem'
+        }}>
+          <AlertTriangle size={42} style={{ color: 'var(--accent-rose, #f43f5e)' }} />
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+            Unable to Load Submissions
+          </h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '480px', margin: 0 }}>
+            {error}
+          </p>
           <button
             onClick={fetchSubmissions}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-[var(--color-primary)] text-white hover:opacity-90"
+            className="btn btn-primary"
+            style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw size={16} />
             <span>Try Again</span>
           </button>
         </div>
       ) : filteredSubmissions.length === 0 ? (
-        <div className="p-12 text-center rounded-2xl bg-[var(--color-surface)] border border-dashed border-[var(--color-border)] space-y-2">
-          <Users className="w-10 h-10 text-[var(--color-text-tertiary)] mx-auto" />
-          <h3 className="text-base font-semibold text-[var(--color-text-primary)]">No matching student submissions</h3>
-          <p className="text-xs text-[var(--color-text-secondary)]">
-            Try adjusting your search query or status filter.
+        <div className="glass-card" style={{
+          padding: '4rem 2rem',
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '1rem'
+        }}>
+          <Users size={36} style={{ color: 'var(--text-muted)' }} />
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+            No Matching Submissions
+          </h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '380px', margin: 0 }}>
+            No enrolled students match your search or status filter. Try clearing your search parameters.
           </p>
         </div>
       ) : (
-        <div className="rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+        <div className="glass-card" style={{ padding: '0', overflow: 'hidden', borderRadius: 'var(--radius-lg, 20px)' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
-                <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-subtle)] text-[11px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">
-                  <th className="py-3 px-4">Student</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Submitted At</th>
-                  <th className="py-3 px-4">File Name</th>
-                  <th className="py-3 px-4 text-right">Action</th>
+                <tr style={{
+                  background: 'var(--bg-secondary)',
+                  borderBottom: '1px solid var(--border-color)',
+                  color: 'var(--text-secondary)',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  <th style={{ padding: '1rem 1.25rem' }}>Student</th>
+                  <th style={{ padding: '1rem 1.25rem' }}>Status</th>
+                  <th style={{ padding: '1rem 1.25rem' }}>Submitted At</th>
+                  <th style={{ padding: '1rem 1.25rem' }}>Deliverable File</th>
+                  <th style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--color-border)] text-sm">
-                {filteredSubmissions.map((sub) => {
+              <tbody>
+                {filteredSubmissions.map((sub, idx) => {
                   const hasFile = Boolean(sub.fileName && (sub.status === 'ON_TIME' || sub.status === 'LATE'));
                   const isDownloading = downloadingStudentId === sub.studentId;
+                  const initials = (sub.studentName || 'S')
+                    .split(' ')
+                    .map(n => n[0])
+                    .join('')
+                    .toUpperCase()
+                    .slice(0, 2);
 
                   return (
                     <tr
-                      key={sub.studentId}
-                      className="hover:bg-[var(--color-surface-subtle)]/50 transition-colors"
+                      key={sub.studentId || idx}
+                      style={{
+                        borderBottom: '1px solid var(--border-color)',
+                        transition: 'background 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                     >
                       {/* Student info */}
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-[var(--color-text-primary)]">
-                          {sub.studentName}
-                        </div>
-                        {sub.studentEmail && (
-                          <div className="text-xs text-[var(--color-text-tertiary)]">
-                            {sub.studentEmail}
+                      <td style={{ padding: '1rem 1.25rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, var(--primary, #8b5cf6) 0%, var(--accent-purple, #d0bcff) 100%)',
+                            color: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 700,
+                            fontSize: '0.8rem',
+                            flexShrink: 0
+                          }}>
+                            {initials}
                           </div>
-                        )}
+                          <div>
+                            <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.92rem' }}>
+                              {sub.studentName}
+                            </div>
+                            {sub.studentEmail && (
+                              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                {sub.studentEmail}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </td>
 
-                      {/* Status */}
-                      <td className="py-3 px-4">
+                      {/* Status badge */}
+                      <td style={{ padding: '1rem 1.25rem' }}>
                         {getStatusBadge(sub.status)}
                       </td>
 
                       {/* Submitted At */}
-                      <td className="py-3 px-4 text-xs text-[var(--color-text-secondary)]">
+                      <td style={{ padding: '1rem 1.25rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                         {sub.submittedAt ? (
                           new Date(sub.submittedAt).toLocaleString(undefined, {
                             month: 'short',
@@ -291,52 +476,68 @@ export default function TeacherSubmissions() {
                             minute: '2-digit'
                           })
                         ) : (
-                          <span className="text-[var(--color-text-tertiary)]">—</span>
+                          <span style={{ color: 'var(--text-muted)' }}>—</span>
                         )}
                       </td>
 
                       {/* File Name */}
-                      <td className="py-3 px-4">
+                      <td style={{ padding: '1rem 1.25rem' }}>
                         {hasFile ? (
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-[var(--color-primary)] shrink-0" />
-                            <div className="max-w-[200px] truncate text-xs font-medium text-[var(--color-text-primary)]">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <FileText size={16} style={{ color: 'var(--primary, #8b5cf6)', flexShrink: 0 }} />
+                            <div style={{
+                              maxWidth: '220px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              fontSize: '0.85rem',
+                              fontWeight: 600,
+                              color: 'var(--text-primary)'
+                            }}>
                               {sub.fileName}
                             </div>
                             {sub.size && (
-                              <span className="text-[11px] text-[var(--color-text-tertiary)]">
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                 ({formatFileSize(sub.size)})
                               </span>
                             )}
                           </div>
                         ) : (
-                          <span className="text-xs text-[var(--color-text-tertiary)]">—</span>
+                          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>No submission</span>
                         )}
                       </td>
 
-                      {/* Action: View PDF */}
-                      <td className="py-3 px-4 text-right">
+                      {/* Action */}
+                      <td style={{ padding: '1rem 1.25rem', textAlign: 'right' }}>
                         {hasFile ? (
                           <button
                             type="button"
                             disabled={isDownloading}
                             onClick={() => handleViewPdf(sub.studentId, sub.studentName)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--color-primary)] text-white hover:opacity-90 transition-opacity disabled:opacity-50 shadow-sm"
+                            className="btn btn-primary"
+                            style={{
+                              padding: '0.45rem 0.9rem',
+                              fontSize: '0.8rem',
+                              borderRadius: 'var(--radius-sm, 8px)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.4rem'
+                            }}
                           >
                             {isDownloading ? (
                               <>
-                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                <RefreshCw size={13} className="animate-spin" />
                                 <span>Loading...</span>
                               </>
                             ) : (
                               <>
-                                <ExternalLink className="w-3.5 h-3.5" />
+                                <ExternalLink size={13} />
                                 <span>View PDF</span>
                               </>
                             )}
                           </button>
                         ) : (
-                          <span className="text-xs text-[var(--color-text-tertiary)]">No PDF</span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>—</span>
                         )}
                       </td>
                     </tr>

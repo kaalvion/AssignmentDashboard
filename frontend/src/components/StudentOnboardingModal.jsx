@@ -41,7 +41,7 @@ export default function StudentOnboardingModal() {
         setError(res?.message || 'Failed to save class details.');
       }
     } catch (err) {
-      setError(err?.message || 'Error saving class details. Please try again.');
+      setError(err?.message || (typeof err === 'string' ? err : 'Error saving class details. Please try again.'));
     } finally {
       setSubmitting(false);
     }
