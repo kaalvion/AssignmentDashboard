@@ -329,6 +329,60 @@ export default async function handler(req, res) {
     }
   }
 
+  // 9b. Personal Tasks (/api/tasks)
+  if (pathname.startsWith('/api/tasks')) {
+    if (req.method === 'POST') {
+      const body = await parseBody(req);
+      const newTask = {
+        id: 'task_' + Date.now(),
+        title: body.title || 'Personal Study Task',
+        deadline: body.deadline || null,
+        isCompleted: false,
+        createdAt: new Date().toISOString()
+      };
+      return json(201, { success: true, message: 'Task created.', data: newTask });
+    }
+    if (req.method === 'PUT') {
+      return json(200, { success: true, message: 'Task updated.' });
+    }
+    if (req.method === 'DELETE') {
+      return json(200, { success: true, message: 'Task deleted.' });
+    }
+    return json(200, {
+      success: true,
+      data: [
+        {
+          id: 'task_sample_1',
+          title: 'Review Chapter 3: TCP Flow Control & Congestion',
+          deadline: new Date(Date.now() + 86400000).toISOString(),
+          isCompleted: false,
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: 'task_sample_2',
+          title: 'Practice SQL Indexing & Query Plans',
+          deadline: new Date(Date.now() + 86400000 * 3).toISOString(),
+          isCompleted: true,
+          createdAt: new Date().toISOString()
+        }
+      ]
+    });
+  }
+
+  // 9c. Planner (/api/planner)
+  if (pathname.startsWith('/api/planner')) {
+    return json(200, {
+      success: true,
+      data: {
+        dailyPlan: [
+          { time: '09:00 - 10:30', title: 'Computer Networks Socket Lab', priority: 'HIGH', completed: false },
+          { time: '11:00 - 12:30', title: 'DBMS Relational Schema Indexing', priority: 'HIGH', completed: true },
+          { time: '14:00 - 15:30', title: 'Web Tech REST API Integration', priority: 'MEDIUM', completed: false }
+        ]
+      }
+    });
+  }
+
   // 10. Fallback for any other API route
   return json(200, {
     success: true,
