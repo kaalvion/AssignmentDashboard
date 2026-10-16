@@ -9,6 +9,63 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Health check
+app.get('/api/health', (req, res) => {
+  return res.json({ success: true, message: 'Server is running.' });
+});
+
+// Auth handlers for fallback/serverless deployment
+app.get('/api/auth/me', (req, res) => {
+  const userId = req.headers['x-user-id'] || 'demo_student';
+  const userEmail = req.headers['x-user-email'] || 'student@nexus.edu';
+  const userName = req.headers['x-user-name'] || 'Student';
+  return res.json({
+    success: true,
+    data: {
+      id: userId,
+      name: userName,
+      email: userEmail,
+      role: 'STUDENT',
+      course: 'BCA',
+      semester: '1ST',
+      division: 'A',
+      needsOnboarding: false
+    }
+  });
+});
+
+app.put('/api/auth/profile', (req, res) => {
+  const { course, semester, division, name } = req.body || {};
+  return res.json({
+    success: true,
+    message: 'Profile updated successfully.',
+    data: {
+      name: name || 'Student',
+      course: course || 'BCA',
+      semester: semester || '1ST',
+      division: division || 'A',
+      needsOnboarding: false
+    }
+  });
+});
+
+app.post('/api/auth/login', (req, res) => {
+  return res.json({
+    success: true,
+    message: 'Login successful.',
+    data: {
+      token: 'demo_token',
+      user: {
+        id: 'demo_student',
+        name: 'Student',
+        email: req.body?.email || 'student@nexus.edu',
+        role: 'STUDENT',
+        needsOnboarding: false
+      }
+    }
+  });
+});
+
 // Fallback Mock API handlers for Vercel Frontend deployment
 app.get('/api/assignments/subjects', (req, res) => {
   return res.json({
@@ -175,7 +232,7 @@ app.get('/api/notifications', (req, res) => {
   });
 });
 
-app.put('/api/notifications/*', (req, res) => {
+app.put('/api/notifications/{*splat}', (req, res) => {
   return res.json({ success: true, message: 'Notification updated.' });
 });
 
@@ -214,7 +271,7 @@ app.get('/api/gamification/achievements', (req, res) => {
   });
 });
 
-app.all('/api/*', (req, res) => {
+app.use('/api', (req, res) => {
   res.json({ success: true, message: 'API Endpoint active.' });
 });
 
