@@ -124,7 +124,7 @@ export default function App() {
             <Route
               path="/calendar"
               element={
-                <RoleRoute allowedRoles={['STUDENT']}>
+                <RoleRoute allowedRoles={['STUDENT', 'TEACHER', 'ADMIN']}>
                   <AcademicCalendar />
                 </RoleRoute>
               }
@@ -132,7 +132,7 @@ export default function App() {
             <Route
               path="/planner"
               element={
-                <RoleRoute allowedRoles={['STUDENT']}>
+                <RoleRoute allowedRoles={['STUDENT', 'TEACHER', 'ADMIN']}>
                   <SmartStudyPlanner />
                 </RoleRoute>
               }
@@ -140,7 +140,7 @@ export default function App() {
             <Route
               path="/analytics"
               element={
-                <RoleRoute allowedRoles={['STUDENT']}>
+                <RoleRoute allowedRoles={['STUDENT', 'TEACHER', 'ADMIN']}>
                   <Analytics />
                 </RoleRoute>
               }
@@ -148,7 +148,7 @@ export default function App() {
             <Route
               path="/leaderboard"
               element={
-                <RoleRoute allowedRoles={['STUDENT']}>
+                <RoleRoute allowedRoles={['STUDENT', 'TEACHER', 'ADMIN']}>
                   <Leaderboard />
                 </RoleRoute>
               }
@@ -156,7 +156,7 @@ export default function App() {
             <Route
               path="/achievements"
               element={
-                <RoleRoute allowedRoles={['STUDENT']}>
+                <RoleRoute allowedRoles={['STUDENT', 'TEACHER', 'ADMIN']}>
                   <Achievements />
                 </RoleRoute>
               }
@@ -164,7 +164,7 @@ export default function App() {
             <Route
               path="/groups"
               element={
-                <RoleRoute allowedRoles={['STUDENT']}>
+                <RoleRoute allowedRoles={['STUDENT', 'TEACHER', 'ADMIN']}>
                   <Groups />
                 </RoleRoute>
               }
@@ -172,7 +172,7 @@ export default function App() {
             <Route
               path="/tasks"
               element={
-                <RoleRoute allowedRoles={['STUDENT']}>
+                <RoleRoute allowedRoles={['STUDENT', 'TEACHER', 'ADMIN']}>
                   <MyTasks />
                 </RoleRoute>
               }

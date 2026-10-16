@@ -251,6 +251,26 @@ export default async function handler(req, res) {
     });
   }
 
+  // 7b. Analytics Productivity (/api/analytics/productivity)
+  if (pathname === '/api/analytics/productivity') {
+    return json(200, {
+      success: true,
+      data: {
+        statusCounts: {
+          COMPLETED: 1,
+          IN_PROGRESS: 1,
+          PENDING: 1,
+          OVERDUE: 0
+        },
+        subjectDistribution: [
+          { name: 'Computer Networks', total: 1, completed: 0, hours: 4.5 },
+          { name: 'Database Management', total: 1, completed: 0, hours: 3.0 },
+          { name: 'Web Technologies', total: 1, completed: 1, hours: 2.0 }
+        ]
+      }
+    });
+  }
+
   // 8. Notifications (/api/notifications)
   if (pathname.startsWith('/api/notifications')) {
     if (req.method === 'PUT') {
