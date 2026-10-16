@@ -35,9 +35,11 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  // Parse path
+  // Parse path and query
   const rawUrl = req.url || '';
-  const pathname = rawUrl.split('?')[0];
+  const parsedUrl = new URL(rawUrl, 'http://localhost');
+  const pathname = parsedUrl.pathname;
+  const searchParams = parsedUrl.searchParams;
 
   // Helper JSON response
   const json = (statusCode, data) => {
